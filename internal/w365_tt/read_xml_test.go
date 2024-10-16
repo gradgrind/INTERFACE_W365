@@ -22,4 +22,7 @@ func TestReadXML(t *testing.T) {
 		log.Fatal(err)
 	}
 	fmt.Printf("\n ***** Reading %s *****\n", f365)
+
+	ReadXML(f365)
+
 }
