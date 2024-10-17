@@ -2,19 +2,18 @@ package w365_tt
 
 import (
 	"encoding/xml"
-	"fmt"
 	"io"
 	"log"
 	"os"
 )
 
-func ReadXML(filepath string) {
+func ReadXML(filepath string) W365TT {
 	// Open the  XML file
 	xmlFile, err := os.Open(filepath)
 	if err != nil {
 		log.Fatal(err)
 	}
-	// remember to close the file at the end of the program
+	// Remember to close the file at the end of the function
 	defer xmlFile.Close()
 	// read the opened XML file as a byte array.
 	byteValue, _ := io.ReadAll(xmlFile)
@@ -34,7 +33,5 @@ func ReadXML(filepath string) {
 
 	   fmt.Printf("*+ Days: %+v\n", daymap)
 	*/
-	for i, d := range v.Days {
-		fmt.Printf("*+ Day %d: %+v\n", i, d)
-	}
+	return v
 }

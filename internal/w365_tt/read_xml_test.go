@@ -23,6 +23,8 @@ func TestReadXML(t *testing.T) {
 	}
 	fmt.Printf("\n ***** Reading %s *****\n", f365)
 
-	ReadXML(f365)
-
+	w365 := ReadXML(f365)
+	for i, d := range w365.Days {
+		fmt.Printf("*+ Day %d: %+v\n", i, d)
+	}
 }
