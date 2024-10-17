@@ -24,10 +24,27 @@ func TestReadXML(t *testing.T) {
 	fmt.Printf("\n ***** Reading %s *****\n", f365)
 	w365 := ReadXML(f365)
 
+	coursemap := map[string]Course{}
+	for _, c := range w365.Courses {
+		coursemap[c.Id] = c
+	}
+	ecoursemap := map[string]EpochPlanCourse{}
+	for _, c := range w365.EpochPlanCourses {
+		ecoursemap[c.Id] = c
+	}
 	for i, d := range w365.Lessons {
-		if len(d.EpochPlanGrade) != 0 {
-			fmt.Printf("*+++ %02d: %+v\n", i, d)
+		_, ok := coursemap[d.Course]
+		if ok {
+			if d.Fixed {
+				fmt.Printf("*--- %02d: %+v\n", i, d)
+			}
+		} else {
+			_, ok = ecoursemap[d.Course]
+			if ok {
+				fmt.Printf("*+++ %02d: %+v\n", i, d)
+			} else {
+				fmt.Printf("*::: %02d: %+v\n", i, d)
+			}
 		}
 	}
-
 }

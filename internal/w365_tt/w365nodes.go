@@ -114,24 +114,24 @@ type Division struct {
 }
 
 type Course struct {
-	Id               string  `xml:",attr"`
-	ListPosition     float32 `xml:",attr"` // Is this used?
-	Name             string  `xml:",attr"` // Is this used?
-	Shortcut         string  `xml:",attr"` // Is this used?
-	Subjects         string  `xml:",attr"` // can be more than one!
-	Groups           string  `xml:",attr"`
-	Teachers         string  `xml:",attr"`
-	DoubleLessonMode string  `xml:",attr"` // one course has "2,3"!
-	HoursPerWeek     float32 `xml:",attr"`
-	PreferredRooms   string  `xml:",attr"`
-	Categories       string  `xml:",attr"` // Is this used?
-	EpochWeeks       float32 `xml:",attr"` // Is this relevant?
+	Id                string  `xml:",attr"`
+	ListPosition      float32 `xml:",attr"` // Is this used?
+	Name              string  `xml:",attr"` // Is this used?
+	Shortcut          string  `xml:",attr"` // Is this used?
+	Subjects          string  `xml:",attr"` // can be more than one!
+	Groups            string  `xml:",attr"` // either a Group or a Class?
+	Teachers          string  `xml:",attr"`
+	DoubleLessonMode  string  `xml:",attr"` // one course has "2,3"!
+	HoursPerWeek      float32 `xml:",attr"`
+	SplitHoursPerWeek string  `xml:",attr"` // "", "2+2+2+2+2" or "2+"
+	PreferredRooms    string  `xml:",attr"`
+	Categories        string  `xml:",attr"` // Is this used?
+	EpochWeeks        float32 `xml:",attr"` // Is this relevant?
 	//+ Color string  `xml:",attr"` // "#ffcc00" // Is this used?
 
 	// These seem to be empty always. Are they relevant?
 	//+ EpochSlots        string `xml:",attr"` // What is this?
 	//+ SplitEpochWeeks   string `xml:",attr"` // What is this?
-	//+ SplitHoursPerWeek string `xml:",attr"` // What is this?
 }
 
 type EpochPlanCourse struct {
@@ -140,7 +140,7 @@ type EpochPlanCourse struct {
 	Name             string  `xml:",attr"` // Is this used?
 	Shortcut         string  `xml:",attr"` // Is this used?
 	Subjects         string  `xml:",attr"` // can be more than one!
-	Groups           string  `xml:",attr"`
+	Groups           string  `xml:",attr"` // either a Group or a Class?
 	Teachers         string  `xml:",attr"`
 	DoubleLessonMode string  `xml:",attr"` // often "1,2"
 	PreferredRooms   string  `xml:",attr"`
@@ -157,15 +157,16 @@ type EpochPlanCourse struct {
 }
 
 type Lesson struct {
-	Id             string `xml:",attr"`
-	Course         string `xml:",attr"`
-	Day            int    `xml:",attr"`
-	Hour           int    `xml:",attr"`
-	DoubleLesson   bool   `xml:",attr"` // What exactly does this mean?
-	Fixed          bool   `xml:",attr"`
-	Fractions      string `xml:",attr"`
-	LocalRooms     string `xml:",attr"`
-	EpochPlan      string `xml:",attr"` // What is this?
+	Id           string `xml:",attr"`
+	Course       string `xml:",attr"`
+	Day          int    `xml:",attr"`
+	Hour         int    `xml:",attr"`
+	DoubleLesson bool   `xml:",attr"` // What exactly does this mean?
+	Fixed        bool   `xml:",attr"`
+	Fractions    string `xml:",attr"`
+	LocalRooms   string `xml:",attr"`
+	EpochPlan    string `xml:",attr"` // What is this? Not relevant?
+	// If this entry is not empty, the Course field may be an EpochPlanCourse ... or nothing!
 	EpochPlanGrade string `xml:",attr"` // What is this?
 }
 
