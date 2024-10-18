@@ -201,6 +201,14 @@ func test_ids_exist(w365 *W365TT, idmap IdMap) {
 		}
 	}
 	for _, c := range w365.Lessons {
+		if len(c.Course) == 0 {
+			fmt.Println("  !!! Lesson with no Course")
+		} else {
+			_, ok := idmap.Id2Node[c.Course]
+			if !ok {
+				fmt.Printf("  !!! Lessons.Course %s\n", c.Course)
+			}
+		}
 		if len(c.LocalRooms) != 0 {
 			for _, x := range strings.Split(c.LocalRooms, ",") {
 				_, ok := idmap.Id2Node[x]
