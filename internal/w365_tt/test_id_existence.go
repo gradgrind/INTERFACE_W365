@@ -85,22 +85,6 @@ func test_ids_exist(w365 *W365TT, idmap IdMap) {
 		}
 	}
 	for _, c := range w365.Groups {
-		if len(c.Absences) != 0 {
-			for _, x := range strings.Split(c.Absences, ",") {
-				_, ok := idmap.Id2Node[x]
-				if !ok {
-					fmt.Printf("  !!! Groups.Absences %s\n", x)
-				}
-			}
-		}
-		if len(c.Categories) != 0 {
-			for _, x := range strings.Split(c.Categories, ",") {
-				_, ok := idmap.Id2Node[x]
-				if !ok {
-					fmt.Printf("  !!! Groups.Categories %s\n", x)
-				}
-			}
-		}
 		gstr, ok := groupTagFull(idmap, c.Id)
 		if !ok {
 			fmt.Printf("  !!! Invalid Group: %s\n", gstr)

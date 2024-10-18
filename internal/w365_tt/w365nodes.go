@@ -130,8 +130,6 @@ type Group struct {
 	ListPosition float32 `xml:",attr"` // Is this used?
 	Name         string  `xml:",attr"` // How is this used?
 	Shortcut     string  `xml:",attr"` // Presumably the primary tag ("eindeutig")
-	Absences     string  `xml:",attr"` // Is this used?
-	Categories   string  `xml:",attr"` // Is this used?
 	//+ NumberOfStudents int     `xml:",attr"` // Is this used?
 	//+ Color string  `xml:",attr"` // "#ffcc00" // Is this used?
 }

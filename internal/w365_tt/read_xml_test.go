@@ -52,4 +52,8 @@ func TestReadXML(t *testing.T) {
 	*/
 
 	test_ids_exist(&w365, idmap)
+
+	for _, n := range w365.Classes {
+		read_divisions(idmap, n.Id)
+	}
 }
