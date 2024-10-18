@@ -101,6 +101,10 @@ func test_ids_exist(w365 *W365TT, idmap IdMap) {
 				}
 			}
 		}
+		gstr, ok := groupTagFull(idmap, c.Id)
+		if !ok {
+			fmt.Printf("  !!! Invalid Group: %s\n", gstr)
+		}
 	}
 	for _, c := range w365.Divisions {
 		if len(c.Groups) != 0 {
