@@ -4,11 +4,19 @@ import "encoding/xml"
 
 // The structures used for reading a timetable-source file exported by W365.
 
+type TTNode interface {
+	IdStr() string
+}
+
 type Day struct {
 	Id           string  `xml:",attr"`
 	ListPosition float32 `xml:",attr"`
 	Name         string  `xml:",attr"`
 	Shortcut     string  `xml:",attr"`
+}
+
+func (n *Day) IdStr() string {
+	return n.Id
 }
 
 type Hour struct {
@@ -23,10 +31,18 @@ type Hour struct {
 	MiddayBreak        bool     `xml:",attr"`
 }
 
+func (n *Hour) IdStr() string {
+	return n.Id
+}
+
 type Absence struct {
 	Id   string `xml:",attr"`
 	Day  int    `xml:"day,attr" `
 	Hour int    `xml:"hour,attr"`
+}
+
+func (n *Absence) IdStr() string {
+	return n.Id
 }
 
 type Teacher struct {
@@ -47,12 +63,20 @@ type Teacher struct {
 	MaxAfternoons int `xml:"NumberOfAfterNoonDays,attr"`
 }
 
+func (n *Teacher) IdStr() string {
+	return n.Id
+}
+
 type Subject struct {
 	Id           string  `xml:",attr"`
 	ListPosition float32 `xml:",attr"`
 	Name         string  `xml:",attr"`
 	Shortcut     string  `xml:",attr"`
 	//+ Color string  `xml:",attr"` // "#ffcc00"
+}
+
+func (n *Subject) IdStr() string {
+	return n.Id
 }
 
 type Room struct {
@@ -69,6 +93,10 @@ type Room struct {
 	// case ListPosition seems to be set to -1.
 	//+ Capacity int `xml:"capacity,attr"`
 	//+ Color string  `xml:",attr"` // "#ffcc00"
+}
+
+func (n *Room) IdStr() string {
+	return n.Id
 }
 
 type Class struct {
@@ -93,6 +121,10 @@ type Class struct {
 	//+ MaxGapsPerWeek    int `xml:"MaxWindowsPerWeek,attr"`
 }
 
+func (n *Class) IdStr() string {
+	return n.Id
+}
+
 type Group struct {
 	Id           string  `xml:",attr"`
 	ListPosition float32 `xml:",attr"` // Is this used?
@@ -104,6 +136,10 @@ type Group struct {
 	//+ Color string  `xml:",attr"` // "#ffcc00" // Is this used?
 }
 
+func (n *Group) IdStr() string {
+	return n.Id
+}
+
 type Division struct {
 	XMLName      xml.Name `xml:"GradePartiton"`
 	Id           string   `xml:",attr"`
@@ -111,6 +147,10 @@ type Division struct {
 	Name         string   `xml:",attr"`
 	Shortcut     string   `xml:",attr"` // Is this used?
 	Groups       string   `xml:",attr"`
+}
+
+func (n *Division) IdStr() string {
+	return n.Id
 }
 
 type Course struct {
@@ -132,6 +172,10 @@ type Course struct {
 	// These seem to be empty always. Are they relevant?
 	//+ EpochSlots        string `xml:",attr"` // What is this?
 	//+ SplitEpochWeeks   string `xml:",attr"` // What is this?
+}
+
+func (n *Course) IdStr() string {
+	return n.Id
 }
 
 type EpochPlanCourse struct {
@@ -156,6 +200,10 @@ type EpochPlanCourse struct {
 	//+ SplitHoursPerWeek string `xml:",attr"` // What is this?
 }
 
+func (n *EpochPlanCourse) IdStr() string {
+	return n.Id
+}
+
 type Lesson struct {
 	Id           string `xml:",attr"`
 	Course       string `xml:",attr"`
@@ -170,9 +218,17 @@ type Lesson struct {
 	EpochPlanGrade string `xml:",attr"` // What is this?
 }
 
+func (n *Lesson) IdStr() string {
+	return n.Id
+}
+
 type Fraction struct {
 	Id          string `xml:",attr"`
 	SuperGroups string `xml:",attr"`
+}
+
+func (n *Fraction) IdStr() string {
+	return n.Id
 }
 
 type W365TT struct {
