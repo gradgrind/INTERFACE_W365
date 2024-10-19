@@ -15,9 +15,9 @@ func groupTagFull(idmap IdMap, gid string) (string, bool) {
 		if !ok {
 			return fmt.Sprintf("*(%s)*", gid), false
 		}
-		return fmt.Sprintf("%d%s.%s", c.Level, c.Letter, n.Shortcut), true
+		return fmt.Sprintf("%s.%s", c.Tag(), n.Shortcut), true
 	} else if n, ok := gnode.(*Class); ok {
-		return fmt.Sprintf("%d%s", n.Level, n.Letter), true
+		return n.Tag(), true
 	} else {
 		return fmt.Sprintf("*?%s?*", gid), false
 	}

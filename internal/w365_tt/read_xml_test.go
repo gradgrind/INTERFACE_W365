@@ -86,3 +86,8 @@ func TestDivisionGroups(t *testing.T) {
 		fmt.Println("---------------------------------------------")
 	}
 }
+
+func TestFractions(t *testing.T) {
+	w365, idmap := readfile()
+	test_fractions(&w365, idmap)
+}
