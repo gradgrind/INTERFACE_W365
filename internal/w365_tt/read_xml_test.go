@@ -91,3 +91,8 @@ func TestFractions(t *testing.T) {
 	w365, idmap := readfile()
 	test_fractions(&w365, idmap)
 }
+
+func TestGroups(t *testing.T) {
+	w365, idmap := readfile()
+	test_lesson_groups(&w365, idmap)
+}

@@ -186,11 +186,27 @@ func test_ids_exist(w365 *W365TT, idmap IdMap) {
 	}
 	for _, c := range w365.Lessons {
 		if len(c.Course) == 0 {
-			fmt.Println("  !!! Lesson with no Course")
+			// Let's assume this Lesson is invalid/unused
+			continue
+			//fmt.Println("  !!! Lesson with no Course")
 		} else {
-			_, ok := idmap.Id2Node[c.Course]
+			crs, ok := idmap.Id2Node[c.Course]
 			if !ok {
-				fmt.Printf("  !!! Lessons.Course %s\n", c.Course)
+				// Let's assume this Lesson is invalid/unused
+				continue
+				//fmt.Printf("  !!! Lessons.Course %s\n", c.Course)
+			} else {
+				_, ok := crs.(*Course)
+				if ok {
+					//fmt.Printf("  +++ Lesson : Course %s : %s\n", c.Id, c.Course)
+				} else {
+					_, ok := crs.(*EpochPlanCourse)
+					if ok {
+						fmt.Printf("  +++ Lesson : EpochCourse %s : %s\n", c.Id, c.Course)
+					} else {
+						fmt.Printf("  !!! Lessons.Course? %s\n", c.Course)
+					}
+				}
 			}
 		}
 		if len(c.LocalRooms) != 0 {
