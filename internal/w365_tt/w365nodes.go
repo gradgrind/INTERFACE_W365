@@ -1,6 +1,9 @@
 package w365_tt
 
-import "encoding/xml"
+import (
+	"encoding/xml"
+	"fmt"
+)
 
 // The structures used for reading a timetable-source file exported by W365.
 
@@ -123,6 +126,10 @@ type Class struct {
 
 func (n *Class) IdStr() string {
 	return n.Id
+}
+
+func (n *Class) Tag() string {
+	return fmt.Sprintf("%d%s", n.Level, n.Letter)
 }
 
 type Group struct {

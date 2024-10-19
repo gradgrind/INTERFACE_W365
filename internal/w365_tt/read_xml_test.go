@@ -8,8 +8,7 @@ import (
 	"github.com/ncruces/zenity"
 )
 
-func TestReadXML(t *testing.T) {
-	fmt.Println("\n############## TestReadXML")
+func readfile() (W365TT, IdMap) {
 	const defaultPath = "../_testdata/*.xml"
 	f365, err := zenity.SelectFile(
 		zenity.Filename(defaultPath),
@@ -24,6 +23,11 @@ func TestReadXML(t *testing.T) {
 	fmt.Printf("\n ***** Reading %s *****\n", f365)
 	w365 := ReadXML(f365)
 	idmap := makeIdMap(&w365)
+	return w365, idmap
+}
+
+func TestReadXML(t *testing.T) {
+	//w365, idmap := readfile()
 
 	/*
 		coursemap := map[string]Course{}
@@ -50,10 +54,35 @@ func TestReadXML(t *testing.T) {
 			}
 		}
 	*/
+}
 
+func TestIdsExist(t *testing.T) {
+	w365, idmap := readfile()
 	test_ids_exist(&w365, idmap)
+}
 
+func TestClassDivisions(t *testing.T) {
+	w365, idmap := readfile()
 	for _, n := range w365.Classes {
-		read_divisions(idmap, n.Id)
+		divs := read_divisions(idmap, n.Id)
+		fmt.Printf("  ++ %d%s: %+v\n", n.Level, n.Letter, divs)
+	}
+}
+
+func TestDivisionGroups(t *testing.T) {
+	w365, idmap := readfile()
+	used_groups := test_courses(&w365, idmap)
+	for _, n := range w365.Classes {
+		divs := read_divisions(idmap, n.Id)
+		fmt.Printf("++++++ %s +++++++++++++++++++++++++++++++++\n", n.Tag())
+		fmt.Printf("   Class Group used: %d\n", used_groups[n.Id])
+		for _, cdiv := range divs {
+			for _, g := range cdiv.Groups {
+				if used_groups[g] == 0 {
+					fmt.Printf(" --- %s: %s\n", cdiv.Name, g)
+				}
+			}
+		}
+		fmt.Println("---------------------------------------------")
 	}
 }
