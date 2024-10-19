@@ -79,12 +79,21 @@ func test_lesson_groups(w365 *W365TT, idmap IdMap) {
 							log.Printf("     ... bad SuperGroup %s\n", x)
 							continue
 						}
+						var tag string
+						var cl1 string
 						g, ok := s_.(*Group)
-						if !ok {
-							log.Printf("     ... not a Group %s\n", x)
-							continue
+						if ok {
+							tag = g.Shortcut
+							cl1 = idmap.Group2Class[x].Tag()
+						} else {
+							k, ok := s_.(*Class)
+							if !ok {
+								log.Printf("     ... not a Group/Class %s\n", x)
+								continue
+							}
+							cl1 = k.Tag()
+							tag = cl1
 						}
-						cl1 := idmap.Group2Class[x].Tag()
 						if cl1 != cl {
 							if cl == "" {
 								cl = cl1
@@ -93,7 +102,7 @@ func test_lesson_groups(w365 *W365TT, idmap IdMap) {
 								log.Fatalf("     ... Class mismatch (%s)\n", cg)
 							}
 						}
-						glist = append(glist, g.Shortcut)
+						glist = append(glist, tag)
 					}
 					fmt.Printf(" === %s: %s\n", cl, strings.Join(glist, ","))
 				}
