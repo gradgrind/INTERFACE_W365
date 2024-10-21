@@ -26,7 +26,8 @@ func (n Record) GetX() int {
 }
 
 func SaveJSON(records []Record, jsonpath string) {
-	j, err := json.Marshal(records)
+	j, err := json.MarshalIndent(records, "++", "  ")
+	//j, err := json.Marshal(records)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -73,3 +74,13 @@ func (dbdata *DBData) AddRecord(r Record) int {
 	dbdata.Tables[t] = append(dbdata.Tables[t], i)
 	return i
 }
+
+const (
+	RecordType_DAY     string = "DAY"
+	RecordType_HOUR    string = "HOUR"
+	RecordType_SUBJECT string = "SUBJECT"
+	RecordType_TEACHER string = "TEACHER"
+	RecordType_ROOM    string = "ROOM"
+	RecordType_CLASS   string = "CLASS"
+	RecordType_GROUP   string = "GROUP"
+)

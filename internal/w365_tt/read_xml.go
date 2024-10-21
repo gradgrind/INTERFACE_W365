@@ -40,9 +40,16 @@ func ReadXML(filepath string) W365TT {
 	return v
 }
 
+type DBItem struct {
+	Id   int
+	Type string
+}
+
 type IdMap struct {
 	Id2Node     map[string]interface{}
 	Group2Class map[string]*Class
+	Id2DBId     map[string]DBItem
+	Id2RoomList map[string][]int // RoomGroup W365Id -> rooms, list of db-ids
 }
 
 func makeIdMap(w365 *W365TT) IdMap {
@@ -109,7 +116,12 @@ func makeIdMap(w365 *W365TT) IdMap {
 		}
 	}
 
-	return IdMap{id_node, gid_c}
+	return IdMap{
+		Id2Node:     id_node,
+		Group2Class: gid_c,
+		Id2DBId:     map[string]DBItem{}, // will be populated later
+		Id2RoomList: map[string][]int{},  // will be populated later
+	}
 }
 
 // TODO: Move somewhere more appropriate
@@ -132,24 +144,27 @@ func get_time(t string) string {
 
 func collectData(w365 *W365TT, idmap IdMap) base.DBData {
 	dbdata := base.NewDBData()
-	add_days(&dbdata, w365.Days)
-	add_hours(&dbdata, w365.Hours)
+	add_days(&dbdata, idmap, w365.Days)
+	add_hours(&dbdata, idmap, w365.Hours)
+	add_subjects(&dbdata, idmap, w365.Subjects)
 	add_teachers(&dbdata, idmap, w365.Teachers)
+	add_rooms(&dbdata, idmap, w365.Rooms)
 	return dbdata
 }
 
-func add_days(dbdata *base.DBData, items []Day) {
+func add_days(dbdata *base.DBData, idmap IdMap, items []Day) {
 	for i, d := range items {
 		dbdata.AddRecord(base.Record{
-			"Type": "DAY", "Tag": d.Shortcut, "Name": d.Name, "X": i},
+			"Type": base.RecordType_DAY, "Tag": d.Shortcut, "Name": d.Name, "X": i},
 		)
+		idmap.Id2DBId[d.Id] = DBItem{i, base.RecordType_DAY}
 	}
 }
 
-func add_hours(dbdata *base.DBData, items []Hour) {
+func add_hours(dbdata *base.DBData, idmap IdMap, items []Hour) {
 	for i, d := range items {
 		r := base.Record{
-			"Type": "HOUR", "Tag": d.Shortcut, "Name": d.Name, "X": i}
+			"Type": base.RecordType_HOUR, "Tag": d.Shortcut, "Name": d.Name, "X": i}
 		if d.FirstAfternoonHour {
 			dbdata.SetInfo("AfternoonStartLesson", i)
 		}
@@ -163,6 +178,16 @@ func add_hours(dbdata *base.DBData, items []Hour) {
 			r["EndTime"] = t1
 		}
 		dbdata.AddRecord(r)
+		idmap.Id2DBId[d.Id] = DBItem{i, base.RecordType_HOUR}
+	}
+}
+
+func add_subjects(dbdata *base.DBData, idmap IdMap, items []Subject) {
+	for i, d := range items {
+		dbdata.AddRecord(base.Record{
+			"Type": base.RecordType_SUBJECT, "Tag": d.Shortcut, "Name": d.Name, "X": i},
+		)
+		idmap.Id2DBId[d.Id] = DBItem{i, base.RecordType_SUBJECT}
 	}
 }
 
@@ -193,20 +218,51 @@ func getAbsences(idmap IdMap, alist string) [][]int {
 func add_teachers(dbdata *base.DBData, idmap IdMap, items []Teacher) {
 	for i, d := range items {
 		r := base.Record{
-			"Type": "TEACHER", "Tag": d.Shortcut, "Name": d.Name,
+			"Type": base.RecordType_TEACHER, "Tag": d.Shortcut, "Name": d.Name,
 			"Firstname": d.Firstname, "X": i}
 		absences := getAbsences(idmap, d.Absences)
 		if len(absences) != 0 {
 			r["NotAvailable"] = absences
 		}
-		/* TODO:
-		MinLessonsPerDay int `xml:",attr"`
-		MaxLessonsPerDay int `xml:",attr"`
-		MaxDays          int `xml:",attr"`
-		MaxGapsPerDay    int `xml:"MaxWindowsPerDay,attr"`
-		//TODO: I have found MaxGapsPerWeek more useful
-		MaxAfternoons int `xml:"NumberOfAfterNoonDays,attr"`
-		*/
+		//TODO: Is it correct to put these here?
+		// They are not very hard constraints, but it might be helpful
+		// to have them closely associated with the teacher.
+		r["Constraints"] = map[string]int{
+			"MinHoursDaily":  d.MinLessonsPerDay,
+			"MaxHoursDaily":  d.MaxLessonsPerDay,
+			"MaxDaysPerWeek": d.MaxDays,
+			"MaxGapsPerDay":  d.MaxGapsPerDay,
+			"MaxAfternoons":  d.MaxAfternoons,
+			//TODO: Convert to "IntervalMaxDaysPerWeek"?
+			//TODO? "MaxGapsPerWeek": d.MaxGapsPerWeek,
+			//TODO? "MaxHoursDailyInInterval" for lunch break?
+		}
 		dbdata.AddRecord(r)
+	}
+}
+
+func add_rooms(dbdata *base.DBData, idmap IdMap, items []Room) {
+	for i, d := range items {
+		if len(d.RoomGroups) == 0 {
+			r := base.Record{
+				"Type": base.RecordType_ROOM, "Tag": d.Shortcut, "Name": d.Name, "X": i}
+			absences := getAbsences(idmap, d.Absences)
+			if len(absences) != 0 {
+				r["NotAvailable"] = absences
+			}
+			dbdata.AddRecord(r)
+			idmap.Id2DBId[d.Id] = DBItem{i, base.RecordType_ROOM}
+		} else {
+			var rlist []int
+			for _, r := range strings.Split(d.RoomGroups, ",") {
+				ritem, ok := idmap.Id2DBId[r]
+				if !ok || ritem.Type != base.RecordType_ROOM {
+					log.Printf(" *PROBLEM* Bad Room reference in RoomGroup: %s\n", r)
+				} else {
+					rlist = append(rlist, ritem.Id)
+				}
+			}
+			idmap.Id2RoomList[d.Id] = rlist
+		}
 	}
 }
