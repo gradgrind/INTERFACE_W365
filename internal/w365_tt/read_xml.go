@@ -46,10 +46,11 @@ type DBItem struct {
 }
 
 type IdMap struct {
-	Id2Node     map[string]interface{}
-	Group2Class map[string]*Class
-	Id2DBId     map[string]DBItem
-	Id2RoomList map[string][]int // RoomGroup W365Id -> rooms, list of db-ids
+	Id2Node      map[string]interface{}
+	Group2Class  map[string]*Class
+	Id2DBId      map[string]DBItem
+	Id2RoomList  map[string][]int // RoomGroup W365Id -> rooms, list of db-ids
+	Id2GroupList map[string][]int // Division W365Id -> groups, list of db-ids
 }
 
 func makeIdMap(w365 *W365TT) IdMap {
@@ -117,10 +118,11 @@ func makeIdMap(w365 *W365TT) IdMap {
 	}
 
 	return IdMap{
-		Id2Node:     id_node,
-		Group2Class: gid_c,
-		Id2DBId:     map[string]DBItem{}, // will be populated later
-		Id2RoomList: map[string][]int{},  // will be populated later
+		Id2Node:      id_node,
+		Group2Class:  gid_c,
+		Id2DBId:      map[string]DBItem{}, // will be populated later
+		Id2RoomList:  map[string][]int{},  // will be populated later
+		Id2GroupList: map[string][]int{},  // will be populated later
 	}
 }
 
@@ -149,6 +151,9 @@ func collectData(w365 *W365TT, idmap IdMap) base.DBData {
 	add_subjects(&dbdata, idmap, w365.Subjects)
 	add_teachers(&dbdata, idmap, w365.Teachers)
 	add_rooms(&dbdata, idmap, w365.Rooms)
+	add_groups(&dbdata, idmap, w365.Groups)
+	add_divisions(&dbdata, idmap, w365.Divisions)
+	add_classes(&dbdata, idmap, w365.Classes)
 	return dbdata
 }
 
@@ -209,7 +214,7 @@ func refList(idmap IdMap, rstring string) []interface{} {
 func getAbsences(idmap IdMap, alist string) [][]int {
 	var absences [][]int
 	for _, n0 := range refList(idmap, alist) {
-		n := n0.(Absence)
+		n := n0.(*Absence)
 		absences = append(absences, []int{n.Day, n.Hour})
 	}
 	return absences
@@ -238,6 +243,7 @@ func add_teachers(dbdata *base.DBData, idmap IdMap, items []Teacher) {
 			//TODO? "MaxHoursDailyInInterval" for lunch break?
 		}
 		dbdata.AddRecord(r)
+		idmap.Id2DBId[d.Id] = DBItem{i, base.RecordType_TEACHER}
 	}
 }
 
@@ -257,12 +263,70 @@ func add_rooms(dbdata *base.DBData, idmap IdMap, items []Room) {
 			for _, r := range strings.Split(d.RoomGroups, ",") {
 				ritem, ok := idmap.Id2DBId[r]
 				if !ok || ritem.Type != base.RecordType_ROOM {
-					log.Printf(" *PROBLEM* Bad Room reference in RoomGroup: %s\n", r)
+					log.Printf(
+						" *PROBLEM* Bad Room reference in RoomGroup %s:\n  %s",
+						d.Id, r)
 				} else {
 					rlist = append(rlist, ritem.Id)
 				}
 			}
 			idmap.Id2RoomList[d.Id] = rlist
 		}
+	}
+}
+
+func add_groups(dbdata *base.DBData, idmap IdMap, items []Group) {
+	for i, d := range items {
+		dbdata.AddRecord(base.Record{
+			"Type": base.RecordType_GROUP, "Tag": d.Shortcut, "Name": d.Name, "X": i},
+		)
+		idmap.Id2DBId[d.Id] = DBItem{i, base.RecordType_GROUP}
+	}
+}
+
+func add_divisions(dbdata *base.DBData, idmap IdMap, items []Division) {
+	for _, d := range items {
+		// d.Groups
+		// d.Name
+		var glist []int
+		for _, g := range strings.Split(d.Groups, ",") {
+			gitem, ok := idmap.Id2DBId[g]
+			if !ok || gitem.Type != base.RecordType_GROUP {
+				log.Printf(
+					" *PROBLEM* Bad Group reference in RoomGroup %s:\n  %s",
+					d.Id, g)
+			} else {
+				glist = append(glist, gitem.Id)
+			}
+		}
+		idmap.Id2GroupList[d.Id] = glist
+	}
+}
+
+func add_classes(dbdata *base.DBData, idmap IdMap, items []Class) {
+	for i, d := range items {
+		r := base.Record{
+			"Type": base.RecordType_CLASS, "Tag": d.Tag(), "Name": d.Name, "X": i}
+		absences := getAbsences(idmap, d.Absences)
+		if len(absences) != 0 {
+			r["NotAvailable"] = absences
+		}
+		//ForceFirstHour   bool     `xml:",attr"`
+		//Divisions        string   `xml:"GradePartitions,attr"`
+
+		//TODO: Is it correct to put these here?
+		// They are not very hard constraints, but it might be helpful
+		// to have them closely associated with the teacher.
+		r["Constraints"] = map[string]int{
+			"MinHoursDaily": d.MinLessonsPerDay,
+			"MaxHoursDaily": d.MaxLessonsPerDay,
+			//(TODO? "MaxGapsPerDay":  d.MaxGapsPerDay,)
+			"MaxAfternoons": d.MaxAfternoons,
+			//TODO: Convert to "IntervalMaxDaysPerWeek"?
+			//TODO? "MaxGapsPerWeek": d.MaxGapsPerWeek,
+			//TODO? "MaxHoursDailyInInterval" for lunch break?
+		}
+		dbdata.AddRecord(r)
+		idmap.Id2DBId[d.Id] = DBItem{i, base.RecordType_CLASS}
 	}
 }

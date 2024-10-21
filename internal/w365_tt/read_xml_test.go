@@ -3,26 +3,29 @@ package w365_tt
 import (
 	"fmt"
 	"gradgrind/INTERFACE_W365/internal/base"
-	"log"
+	"path/filepath"
+	"strings"
 	"testing"
-
-	"github.com/ncruces/zenity"
 )
 
 func readfile() (W365TT, IdMap) {
-	const defaultPath = "../_testdata/*.xml"
-	f365, err := zenity.SelectFile(
-		zenity.Filename(defaultPath),
-		zenity.FileFilter{
-			Name:     "Waldorf-365 TT-export",
-			Patterns: []string{"*.xml"},
-			CaseFold: false,
-		})
-	if err != nil {
-		log.Fatal(err)
-	}
+	/*
+		const defaultPath = "../_testdata/*.xml"
+		f365, err := zenity.SelectFile(
+			zenity.Filename(defaultPath),
+			zenity.FileFilter{
+				Name:     "Waldorf-365 TT-export",
+				Patterns: []string{"*.xml"},
+				CaseFold: false,
+			})
+		if err != nil {
+			log.Fatal(err)
+		}
+	*/
+	f365 := "../_testdata/test1.xml"
 	fmt.Printf("\n ***** Reading %s *****\n", f365)
 	w365 := ReadXML(f365)
+	w365.Path = f365
 	idmap := makeIdMap(&w365)
 	return w365, idmap
 }
@@ -101,5 +104,7 @@ func TestGroups(t *testing.T) {
 func Test2DB(t *testing.T) {
 	w365, idmap := readfile()
 	db := collectData(&w365, idmap)
-	base.SaveJSON(db.Records, "")
+	f := strings.TrimSuffix(w365.Path, filepath.Ext(w365.Path))
+	base.SaveJSON(db.Records, f+".json")
+	fmt.Printf("\n ***** Writing %s *****\n", f)
 }

@@ -2,8 +2,8 @@ package base
 
 import (
 	"encoding/json"
-	"fmt"
 	"log"
+	"os"
 )
 
 // A "top-level" JSON object, a database DATA value
@@ -31,7 +31,11 @@ func SaveJSON(records []Record, jsonpath string) {
 	if err != nil {
 		log.Fatal(err)
 	}
-	fmt.Printf(" ??? %+v\n", string(j))
+	//fmt.Printf(" ??? %+v\n", string(j))
+	if err := os.WriteFile(jsonpath, j, 0666); err != nil {
+		log.Fatal(err)
+	}
+
 }
 
 type DBData struct {

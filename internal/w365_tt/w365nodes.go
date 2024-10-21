@@ -103,21 +103,21 @@ func (n *Room) IdStr() string {
 }
 
 type Class struct {
-	XMLName          xml.Name `xml:"Grade"`
-	Id               string   `xml:",attr"`
-	ListPosition     float32  `xml:",attr"`
-	Name             string   `xml:",attr"` // How is this used?
-	Shortcut         string   `xml:",attr"` // Presumably the primary tag ("eindeutig")
-	Level            int      `xml:",attr"`
-	Letter           string   `xml:",attr"`
-	Absences         string   `xml:",attr"`
-	Categories       string   `xml:",attr"`
-	ForceFirstHour   bool     `xml:",attr"`
-	Divisions        string   `xml:"GradePartitions,attr"`
-	Groups           string   `xml:",attr"`
-	MinLessonsPerDay int      `xml:",attr"`
-	MaxLessonsPerDay int      `xml:",attr"`
-	MaxAfternoons    int      `xml:"NumberOfAfterNoonDays,attr"`
+	XMLName      xml.Name `xml:"Grade"`
+	Id           string   `xml:",attr"`
+	ListPosition float32  `xml:",attr"`
+	Name         string   `xml:",attr"` // Unused?
+	//Shortcut         string   `xml:",attr"` // Unused?
+	Level            int    `xml:",attr"`
+	Letter           string `xml:",attr"`
+	Absences         string `xml:",attr"`
+	Categories       string `xml:",attr"`
+	ForceFirstHour   bool   `xml:",attr"`
+	Divisions        string `xml:"GradePartitions,attr"`
+	Groups           string `xml:",attr"` // Superfluous?
+	MinLessonsPerDay int    `xml:",attr"`
+	MaxLessonsPerDay int    `xml:",attr"`
+	MaxAfternoons    int    `xml:"NumberOfAfterNoonDays,attr"`
 	//+ ClassTeachers string `xml:"ClassTeacher,attr"`
 	//+ Color string  `xml:",attr"` // "#ffcc00"
 	//TODO: Implement in W365?
@@ -237,7 +237,8 @@ func (n *Fraction) IdStr() string {
 }
 
 type W365TT struct {
-	XMLName          xml.Name          `xml:"File"`
+	XMLName          xml.Name `xml:"File"`
+	Path             string
 	Days             []Day             `xml:"Day"`
 	Hours            []Hour            `xml:"TimedObject"`
 	Absences         []Absence         `xml:"Absence"`
