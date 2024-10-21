@@ -5,8 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
-	"strconv"
-	"strings"
 
 	_ "github.com/mattn/go-sqlite3"
 )
@@ -20,24 +18,6 @@ type Node map[string]interface{}
 
 func (n Node) GetId() int {
 	return n["Id"].(int)
-}
-
-// TODO: Move somewhere more appropriate
-func get_time(t string) string {
-	// Check time and return as "mm:hh"
-	tn := strings.Split(t, ":")
-	if len(tn) < 2 {
-		return ""
-	}
-	h, err := strconv.Atoi(tn[0])
-	if err != nil || h > 23 || h < 0 {
-		return ""
-	}
-	m, err := strconv.Atoi(tn[1])
-	if err != nil || m > 59 || m < 0 {
-		return ""
-	}
-	return fmt.Sprintf("%02d:%02d", h, m)
 }
 
 func get_days(nlist *[]Node) {
@@ -58,11 +38,11 @@ func get_days(nlist *[]Node) {
 }
 
 func test1(dbpath string) {
-	fmt.Printf("TIME (22:7:12): %s\n", get_time("22:7:12"))
-	fmt.Printf("TIME (6:07): %s\n", get_time("6:07"))
-	fmt.Printf("TIME (24:07): %s\n", get_time("24:07"))
-	fmt.Printf("TIME (-2:07): %s\n", get_time("-2:07"))
-
+	/*	fmt.Printf("TIME (22:7:12): %s\n", get_time("22:7:12"))
+		fmt.Printf("TIME (6:07): %s\n", get_time("6:07"))
+		fmt.Printf("TIME (24:07): %s\n", get_time("24:07"))
+		fmt.Printf("TIME (-2:07): %s\n", get_time("-2:07"))
+	*/
 	nodelist := []Node{}
 	get_days(&nodelist)
 	dbwrite(dbpath, nodelist)

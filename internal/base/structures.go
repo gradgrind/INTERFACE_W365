@@ -46,6 +46,19 @@ func NewDBData() DBData {
 	return d
 }
 
+func (dbdata *DBData) SetInfo(key string, val interface{}) {
+	dbdata.Records[0][key] = val
+}
+
+func (dbdata *DBData) AddInfo(key string, val interface{}) {
+	l := dbdata.Records[0][key]
+	if l == nil {
+		dbdata.Records[0][key] = []interface{}{val}
+	} else {
+		dbdata.Records[0][key] = append(l.([]interface{}), val)
+	}
+}
+
 /*
 func (dbdata *DBData) Id2Tag(id int) string {
 	return dbdata.Records[dbdata.Id2Index[id]]["Tag"].(string)
