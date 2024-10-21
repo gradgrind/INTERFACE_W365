@@ -1,5 +1,11 @@
 package base
 
+import (
+	"encoding/json"
+	"fmt"
+	"log"
+)
+
 // A "top-level" JSON object, a database DATA value
 type Record map[string]interface{}
 
@@ -17,6 +23,14 @@ func (n Record) GetX() int {
 		return x
 	}
 	return -1
+}
+
+func SaveJSON(records []Record, jsonpath string) {
+	j, err := json.Marshal(records)
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Printf(" ??? %+v\n", string(j))
 }
 
 type DBData struct {
@@ -38,7 +52,7 @@ func (dbdata *DBData) Id2Tag(id int) string {
 }
 */
 
-func (dbdata *DBData) addRecord(r Record) int {
+func (dbdata *DBData) AddRecord(r Record) int {
 	i := len(dbdata.Records)
 	dbdata.Records = append(dbdata.Records, r)
 	r["Id"] = i

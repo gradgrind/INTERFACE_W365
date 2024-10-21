@@ -2,6 +2,7 @@ package w365_tt
 
 import (
 	"fmt"
+	"gradgrind/INTERFACE_W365/internal/base"
 	"log"
 	"testing"
 
@@ -95,4 +96,10 @@ func TestFractions(t *testing.T) {
 func TestGroups(t *testing.T) {
 	w365, idmap := readfile()
 	test_lesson_groups(&w365, idmap)
+}
+
+func Test2DB(t *testing.T) {
+	w365, idmap := readfile()
+	db := collectData(&w365, idmap)
+	base.SaveJSON(db.Records, "")
 }

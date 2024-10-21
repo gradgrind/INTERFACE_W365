@@ -2,6 +2,7 @@ package w365_tt
 
 import (
 	"encoding/xml"
+	"gradgrind/INTERFACE_W365/internal/base"
 	"io"
 	"log"
 	"os"
@@ -107,4 +108,15 @@ func makeIdMap(w365 *W365TT) IdMap {
 	}
 
 	return IdMap{id_node, gid_c}
+}
+
+func collectData(w365 *W365TT, idmap IdMap) base.DBData {
+	dbdata := base.NewDBData()
+	for i, d := range w365.Days {
+		dbdata.AddRecord(base.Record{
+			"Type": "DAY", "Tag": d.Shortcut, "Name": d.Name, "X": i},
+		)
+
+	}
+	return dbdata
 }
