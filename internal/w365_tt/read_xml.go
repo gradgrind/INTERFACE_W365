@@ -311,12 +311,41 @@ func add_classes(dbdata *base.DBData, idmap IdMap, items []Class) {
 		if len(absences) != 0 {
 			r["NotAvailable"] = absences
 		}
-		//ForceFirstHour   bool     `xml:",attr"`
-		//Divisions        string   `xml:"GradePartitions,attr"`
+		//Divisions        string
 
+		var plist [][]int // actually a div list?
+		for _, p := range strings.Split(d.Divisions, ",") {
+			pitem, ok := idmap.Id2GroupList[p]
+			if !ok {
+				log.Printf(
+					" *PROBLEM* Bad Division reference in Class %s:\n  %s",
+					d.Id, p)
+			} else {
+				plist = append(plist, pitem)
+			}
+		}
+
+		//TODO: Set field. Also correct structure.
+
+		/* ForceFirstHour   bool
+		If this is true, the following FET constraint should probably be set with
+		Max_Beginnings... = 0. If false, I guess that means without the constraint.
+			<ConstraintStudentsSetEarlyMaxBeginningsAtSecondHour>
+				<Weight_Percentage>100</Weight_Percentage>
+				<Max_Beginnings_At_Second_Hour>0</Max_Beginnings_At_Second_Hour>
+				<Students>1</Students>
+				<Active>true</Active>
+				<Comments></Comments>
+			</ConstraintStudentsSetEarlyMaxBeginningsAtSecondHour>
+		*/
 		//TODO: Is it correct to put these here?
 		// They are not very hard constraints, but it might be helpful
 		// to have them closely associated with the teacher.
+		ffh := 0 // Use an int for ForceFirstHour to match the value type
+		// of the other Constraints.
+		if d.ForceFirstHour {
+			ffh = 1
+		}
 		r["Constraints"] = map[string]int{
 			"MinHoursDaily": d.MinLessonsPerDay,
 			"MaxHoursDaily": d.MaxLessonsPerDay,
@@ -325,6 +354,7 @@ func add_classes(dbdata *base.DBData, idmap IdMap, items []Class) {
 			//TODO: Convert to "IntervalMaxDaysPerWeek"?
 			//TODO? "MaxGapsPerWeek": d.MaxGapsPerWeek,
 			//TODO? "MaxHoursDailyInInterval" for lunch break?
+			"ForceFirstHour": ffh,
 		}
 		dbdata.AddRecord(r)
 		idmap.Id2DBId[d.Id] = DBItem{i, base.RecordType_CLASS}
