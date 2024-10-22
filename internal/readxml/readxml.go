@@ -40,7 +40,13 @@ func ConvertToJSON(f365xml string) string {
 
 	readDays(&outdata, id2node, indata.Days)
 	readHours(&outdata, id2node, indata.Hours)
+	for _, n := range indata.Absences {
+		id2node[n.IdStr()] = n
+	}
+	readTeachers(&outdata, id2node, indata.Teachers)
+	readClasses(&outdata, id2node, indata.Classes)
 
+	// Save as JSON
 	f := strings.TrimSuffix(indata.Path, filepath.Ext(indata.Path)) + ".json"
 	j, err := json.MarshalIndent(outdata, "", "  ")
 	if err != nil {
@@ -114,6 +120,75 @@ func get_time(t string) string {
 		return ""
 	}
 	return fmt.Sprintf("%02d:%02d", h, m)
+}
+
+func readTeachers(
+	outdata *w365tt.W365TopLevel,
+	id2node map[w365tt.W365Ref]interface{},
+	items []Teacher,
+) {
+	for _, n := range items {
+		id2node[n.IdStr()] = n
+
+		r := w365tt.Teacher{
+			Id:        n.IdStr(),
+			Type:      w365tt.TypeTEACHER,
+			Name:      n.Name,
+			Shortcut:  n.Shortcut,
+			Firstname: n.Firstname,
+		}
+		//TODO: Sort the Absences?
+		if len(n.Absences) != 0 {
+			for _, ai := range strings.Split(n.Absences, ",") {
+				an, ok := id2node[w365tt.W365Ref(ai)]
+				if ok {
+					r.Absences = append(r.Absences, w365tt.Absence{
+						Day:  an.(Absence).Day,
+						Hour: an.(Absence).Hour,
+					})
+				}
+
+			}
+		}
+
+		//TODO ...
+
+		outdata.Teachers = append(outdata.Teachers, r)
+	}
+}
+
+// TODO
+func readClasses(
+	outdata *w365tt.W365TopLevel,
+	id2node map[w365tt.W365Ref]interface{},
+	items []Class,
+) {
+	for _, n := range items {
+		id2node[n.IdStr()] = n
+
+		r := w365tt.Class{
+			Id:   n.IdStr(),
+			Type: w365tt.TypeCLASS,
+			Name: n.Name,
+			//TODO: Construct this from Level and Letter
+			//			Shortcut: n.Shortcut,
+		}
+		//TODO: Sort the Absences?
+		if len(n.Absences) != 0 {
+			for _, ai := range strings.Split(n.Absences, ",") {
+				an, ok := id2node[w365tt.W365Ref(ai)]
+				if ok {
+					r.Absences = append(r.Absences, w365tt.Absence{
+						Day:  an.(Absence).Day,
+						Hour: an.(Absence).Hour,
+					})
+				}
+
+			}
+		}
+
+		outdata.Classes = append(outdata.Classes, r)
+	}
 }
 
 /*
