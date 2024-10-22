@@ -236,7 +236,7 @@ func (n *Fraction) IdStr() string {
 	return n.Id
 }
 
-type W365TT struct {
+type W365TTXML struct {
 	XMLName          xml.Name `xml:"File"`
 	Path             string
 	Days             []Day             `xml:"Day"`

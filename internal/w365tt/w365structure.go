@@ -26,7 +26,7 @@ type TTNode interface {
 
 type Info struct {
 	FirstAfternoonHour int
-	MiddayBreak        int
+	MiddayBreak        []int
 }
 
 type Day struct {
