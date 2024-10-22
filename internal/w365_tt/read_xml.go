@@ -284,6 +284,7 @@ func add_groups(dbdata *base.DBData, idmap IdMap, items []Group) {
 	}
 }
 
+//TODO: Can these be handled later, when actually using them?
 func add_divisions(dbdata *base.DBData, idmap IdMap, items []Division) {
 	for _, d := range items {
 		// d.Groups
@@ -299,7 +300,7 @@ func add_divisions(dbdata *base.DBData, idmap IdMap, items []Division) {
 				glist = append(glist, gitem.Id)
 			}
 		}
-		idmap.Id2GroupList[d.Id] = glist
+		idmap.Id2Division[d.Id] = (d.Name, glist)
 	}
 }
 
@@ -312,8 +313,9 @@ func add_classes(dbdata *base.DBData, idmap IdMap, items []Class) {
 			r["NotAvailable"] = absences
 		}
 		//Divisions        string
+		//TODO: Can these use the raw structures?
 
-		var plist [][]int // actually a div list?
+		var plist []map[string]interface{}
 		for _, p := range strings.Split(d.Divisions, ",") {
 			pitem, ok := idmap.Id2GroupList[p]
 			if !ok {
@@ -321,7 +323,7 @@ func add_classes(dbdata *base.DBData, idmap IdMap, items []Class) {
 					" *PROBLEM* Bad Division reference in Class %s:\n  %s",
 					d.Id, p)
 			} else {
-				plist = append(plist, pitem)
+				plist = append(plist, map[string]interface{}{pitem)
 			}
 		}
 

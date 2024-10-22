@@ -104,7 +104,7 @@ func TestGroups(t *testing.T) {
 func Test2DB(t *testing.T) {
 	w365, idmap := readfile()
 	db := collectData(&w365, idmap)
-	f := strings.TrimSuffix(w365.Path, filepath.Ext(w365.Path))
-	base.SaveJSON(db.Records, f+".json")
+	f := strings.TrimSuffix(w365.Path, filepath.Ext(w365.Path)) + ".json"
+	base.SaveJSON(db.Records, f)
 	fmt.Printf("\n ***** Writing %s *****\n", f)
 }
