@@ -187,7 +187,8 @@ type Division struct {
 type Course struct {
 	Id             W365Ref
 	Type           string
-	Subjects       []W365Ref
+	Subjects       []W365Ref // if present, will be converted to Subject
+	Subject        W365Ref
 	Groups         []W365Ref
 	Teachers       []W365Ref
 	PreferredRooms []W365Ref
@@ -211,7 +212,8 @@ type SubCourse struct {
 	Id             W365Ref
 	Type           string
 	SuperCourse    W365Ref
-	Subjects       []W365Ref
+	Subjects       []W365Ref // if present, will be converted to Subject
+	Subject        W365Ref
 	Groups         []W365Ref
 	Teachers       []W365Ref
 	PreferredRooms []W365Ref
