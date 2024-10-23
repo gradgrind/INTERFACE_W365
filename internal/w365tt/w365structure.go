@@ -229,7 +229,6 @@ type Lesson struct {
 	Day        int
 	Hour       int
 	Fixed      bool
-	Fractions  string
 	LocalRooms []W365Ref
 }
 

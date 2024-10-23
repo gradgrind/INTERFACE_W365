@@ -44,8 +44,18 @@ func ConvertToJSON(f365xml string) string {
 	for _, n := range indata.Absences {
 		id2node[n.IdStr()] = n
 	}
+	readSubjects(&outdata, id2node, indata.Subjects)
+	readRooms(&outdata, id2node, indata.Rooms)
 	readTeachers(&outdata, id2node, indata.Teachers)
+	readGroups(&outdata, id2node, indata.Groups)
+	for _, n := range indata.Divisions {
+		id2node[n.IdStr()] = n
+	}
 	readClasses(&outdata, id2node, indata.Classes)
+	readCourses(&outdata, id2node, indata.Courses)
+	readEpochPlanCourses(&outdata, id2node, indata.EpochPlanCourses)
+	readLessons(&outdata, id2node, indata.Lessons)
+	// Currently no SuperCourses, SubCourses or Constraints
 
 	// Save as JSON
 	f := strings.TrimSuffix(indata.Path, filepath.Ext(indata.Path)) + ".json"
@@ -59,15 +69,29 @@ func ConvertToJSON(f365xml string) string {
 	return f
 }
 
+func addId(id2node map[w365tt.W365Ref]interface{}, node TTNode) w365tt.W365Ref {
+	// Check for redeclarations
+	nid := node.IdStr()
+	if _, ok := id2node[nid]; ok {
+		log.Printf("Redefinition of %s\n", nid)
+		return ""
+	}
+	id2node[nid] = node
+	return nid
+}
+
 func readDays(
 	outdata *w365tt.W365TopLevel,
 	id2node map[w365tt.W365Ref]interface{},
 	items []Day,
 ) {
 	for _, n := range items {
-		id2node[n.IdStr()] = n
+		nid := addId(id2node, &n)
+		if nid == "" {
+			continue
+		}
 		outdata.Days = append(outdata.Days, w365tt.Day{
-			Id:       n.IdStr(),
+			Id:       nid,
 			Type:     w365tt.TypeDAY,
 			Name:     n.Name,
 			Shortcut: n.Shortcut,
@@ -81,9 +105,12 @@ func readHours(
 	items []Hour,
 ) {
 	for i, n := range items {
-		id2node[n.IdStr()] = n
+		nid := addId(id2node, &n)
+		if nid == "" {
+			continue
+		}
 		r := w365tt.Hour{
-			Id:       n.IdStr(),
+			Id:       nid,
 			Type:     w365tt.TypeHOUR,
 			Name:     n.Name,
 			Shortcut: n.Shortcut,
@@ -123,15 +150,77 @@ func get_time(t string) string {
 	return fmt.Sprintf("%02d:%02d", h, m)
 }
 
+func readSubjects(
+	outdata *w365tt.W365TopLevel,
+	id2node map[w365tt.W365Ref]interface{},
+	items []Subject,
+) {
+	for _, n := range items {
+		nid := addId(id2node, &n)
+		if nid == "" {
+			continue
+		}
+		outdata.Subjects = append(outdata.Subjects, w365tt.Subject{
+			Id:       nid,
+			Type:     w365tt.TypeSUBJECT,
+			Name:     n.Name,
+			Shortcut: n.Shortcut,
+		})
+	}
+}
+
+func readRooms(
+	outdata *w365tt.W365TopLevel,
+	id2node map[w365tt.W365Ref]interface{},
+	items []Room,
+) {
+	for _, n := range items {
+		nid := addId(id2node, &n)
+		if nid == "" {
+			continue
+		}
+		msg := fmt.Sprintf("Room %s in RoomGroups", nid)
+		rg := w365tt.GetRefList(id2node, n.RoomGroups, msg)
+		if len(rg) == 0 {
+			r := w365tt.Room{
+				Id:       nid,
+				Type:     w365tt.TypeROOM,
+				Name:     n.Name,
+				Shortcut: n.Shortcut,
+			}
+			msg = fmt.Sprintf("Room %s in Absences", nid)
+			for _, ai := range w365tt.GetRefList(id2node, n.Absences, msg) {
+				an := id2node[ai]
+				r.Absences = append(r.Absences, w365tt.Absence{
+					Day:  an.(Absence).Day,
+					Hour: an.(Absence).Hour,
+				})
+			}
+			sortAbsences(r.Absences)
+			outdata.Rooms = append(outdata.Rooms, r)
+		} else {
+			r := w365tt.RoomGroup{
+				Id:   nid,
+				Type: w365tt.TypeROOMGROUP,
+				Name: n.Shortcut, // !
+				//Shortcut: n.Shortcut,
+				Rooms: rg,
+			}
+			outdata.RoomGroups = append(outdata.RoomGroups, r)
+		}
+	}
+}
+
 func readTeachers(
 	outdata *w365tt.W365TopLevel,
 	id2node map[w365tt.W365Ref]interface{},
 	items []Teacher,
 ) {
 	for _, n := range items {
-		nid := n.IdStr()
-		id2node[nid] = n
-
+		nid := addId(id2node, &n)
+		if nid == "" {
+			continue
+		}
 		r := w365tt.Teacher{
 			Id:               nid,
 			Type:             w365tt.TypeTEACHER,
@@ -142,7 +231,9 @@ func readTeachers(
 			MaxLessonsPerDay: n.MaxLessonsPerDay,
 			MaxDays:          n.MaxDays,
 			MaxGapsPerDay:    n.MaxGapsPerDay,
+			MaxGapsPerWeek:   -1,
 			MaxAfternoons:    n.MaxAfternoons,
+			LunchBreak:       true,
 		}
 		msg := fmt.Sprintf("Teacher %s in Absences", nid)
 		for _, ai := range w365tt.GetRefList(id2node, n.Absences, msg) {
@@ -153,12 +244,6 @@ func readTeachers(
 			})
 		}
 		sortAbsences(r.Absences)
-
-		//TODO ...
-		/*
-			LunchBreak       bool
-
-		*/
 		outdata.Teachers = append(outdata.Teachers, r)
 	}
 }
@@ -181,22 +266,48 @@ func sortAbsences(alist []w365tt.Absence) {
 	})
 }
 
-// TODO
+func readGroups(
+	outdata *w365tt.W365TopLevel,
+	id2node map[w365tt.W365Ref]interface{},
+	items []Group,
+) {
+	for _, n := range items {
+		nid := addId(id2node, &n)
+		if nid == "" {
+			continue
+		}
+		outdata.Groups = append(outdata.Groups, w365tt.Group{
+			Id:       nid,
+			Type:     w365tt.TypeGROUP,
+			Shortcut: n.Shortcut,
+		})
+	}
+}
+
 func readClasses(
 	outdata *w365tt.W365TopLevel,
 	id2node map[w365tt.W365Ref]interface{},
 	items []Class,
 ) {
 	for _, n := range items {
-		nid := n.IdStr()
-		id2node[nid] = n
-
+		nid := addId(id2node, &n)
+		if nid == "" {
+			continue
+		}
 		r := w365tt.Class{
-			Id:   nid,
-			Type: w365tt.TypeCLASS,
-			Name: n.Name,
-			//TODO: Construct this from Level and Letter
-			//			Shortcut: n.Shortcut,
+			Id:               nid,
+			Type:             w365tt.TypeCLASS,
+			Name:             n.Name,
+			Level:            n.Level,
+			Letter:           n.Letter,
+			Shortcut:         fmt.Sprintf("%d%s", n.Level, n.Letter),
+			MinLessonsPerDay: n.MinLessonsPerDay,
+			MaxLessonsPerDay: n.MaxLessonsPerDay,
+			MaxGapsPerDay:    -1,
+			MaxAfternoons:    n.MaxAfternoons,
+			MaxGapsPerWeek:   -1,
+			LunchBreak:       true,
+			ForceFirstHour:   n.ForceFirstHour,
 		}
 		msg := fmt.Sprintf("Class %s in Absences", nid)
 		for _, ai := range w365tt.GetRefList(id2node, n.Absences, msg) {
@@ -207,290 +318,116 @@ func readClasses(
 			})
 		}
 		sortAbsences(r.Absences)
+		// Initialize Divisions to get [] instead of null, when empty
+		r.Divisions = []w365tt.Division{}
+		msg = fmt.Sprintf("Class %s in Divisions", nid)
+		for i, d := range w365tt.GetRefList(id2node, n.Divisions, msg) {
+			dn := id2node[d].(Division)
+			msg = fmt.Sprintf("Division %s in Groups", d)
+			glist := w365tt.GetRefList(id2node, dn.Groups, msg)
+			if len(glist) != 0 {
+				nm := dn.Name
+				if nm == "" {
+					nm = fmt.Sprintf("#div%d", i)
+				}
+				r.Divisions = append(r.Divisions, w365tt.Division{
+					Name:   nm,
+					Groups: glist,
+				})
+			}
+		}
 		outdata.Classes = append(outdata.Classes, r)
 	}
 }
 
-/*
-type DBItem struct {
-	Id   int
-	Type string
-}
-
-type IdMap struct {
-	Id2Node      map[string]interface{}
-	Group2Class  map[string]*Class
-	Id2DBId      map[string]DBItem
-	Id2RoomList  map[string][]int // RoomGroup W365Id -> rooms, list of db-ids
-	Id2GroupList map[string][]int // Division W365Id -> groups, list of db-ids
-}
-
-func makeIdMap(w365 *W365TTXML) IdMap {
-	id2node := map[string]interface{}{}
-
-	for i := 0; i < len(w365.Days); i++ {
-		n := &(w365.Days[i])
-		id2node[n.IdStr()] = n
-	}
-	for i := 0; i < len(w365.Hours); i++ {
-		n := &(w365.Hours[i])
-		id2node[n.IdStr()] = n
-	}
-	for i := 0; i < len(w365.Absences); i++ {
-		n := &(w365.Absences[i])
-		id2node[n.IdStr()] = n
-	}
-	for i := 0; i < len(w365.Teachers); i++ {
-		n := &(w365.Teachers[i])
-		id2node[n.IdStr()] = n
-	}
-	for i := 0; i < len(w365.Subjects); i++ {
-		n := &(w365.Subjects[i])
-		id2node[n.IdStr()] = n
-	}
-	for i := 0; i < len(w365.Rooms); i++ {
-		n := &(w365.Rooms[i])
-		id2node[n.IdStr()] = n
-	}
-	for i := 0; i < len(w365.Classes); i++ {
-		n := &(w365.Classes[i])
-		id2node[n.IdStr()] = n
-	}
-	for i := 0; i < len(w365.Groups); i++ {
-		n := &(w365.Groups[i])
-		id2node[n.IdStr()] = n
-	}
-	for i := 0; i < len(w365.Divisions); i++ {
-		n := &(w365.Divisions[i])
-		id2node[n.IdStr()] = n
-	}
-	for i := 0; i < len(w365.Courses); i++ {
-		n := &(w365.Courses[i])
-		id2node[n.IdStr()] = n
-	}
-	for i := 0; i < len(w365.EpochPlanCourses); i++ {
-		n := &(w365.EpochPlanCourses[i])
-		id2node[n.IdStr()] = n
-	}
-	for i := 0; i < len(w365.Lessons); i++ {
-		n := &(w365.Lessons[i])
-		id2node[n.IdStr()] = n
-	}
-	for i := 0; i < len(w365.Fractions); i++ {
-		n := &(w365.Fractions[i])
-		id2node[n.IdStr()] = n
-	}
-
-	gid_c := map[string]*Class{}
-	for i := 0; i < len(w365.Classes); i++ {
-		c := &(w365.Classes[i])
-//		for _, gid := range strings.Split(c.Groups, ",") {
-		for _, gid := range w365tt.GetRefList(c.Groups) {
-			gid_c[gid] = c
+func readCourses(
+	outdata *w365tt.W365TopLevel,
+	id2node map[w365tt.W365Ref]interface{},
+	items []Course,
+) {
+	for _, n := range items {
+		nid := addId(id2node, &n)
+		if nid == "" {
+			continue
 		}
-	}
-
-	return IdMap{
-		Id2Node:      id2node,
-		Group2Class:  gid_c,
-		Id2DBId:      map[string]DBItem{}, // will be populated later
-		Id2RoomList:  map[string][]int{},  // will be populated later
-		Id2GroupList: map[string][]int{},  // will be populated later
-	}
-}
-
-// TODO: Move somewhere more appropriate?
-func collectData(w365 *W365TT, idmap IdMap) base.DBData {
-	dbdata := base.NewDBData()
-	add_days(&dbdata, idmap, w365.Days)
-	add_hours(&dbdata, idmap, w365.Hours)
-	add_subjects(&dbdata, idmap, w365.Subjects)
-	add_teachers(&dbdata, idmap, w365.Teachers)
-	add_rooms(&dbdata, idmap, w365.Rooms)
-	add_groups(&dbdata, idmap, w365.Groups)
-	add_divisions(&dbdata, idmap, w365.Divisions)
-	add_classes(&dbdata, idmap, w365.Classes)
-	return dbdata
-}
-
-func add_subjects(dbdata *base.DBData, idmap IdMap, items []Subject) {
-	for i, d := range items {
-		dbdata.AddRecord(base.Record{
-			"Type": base.RecordType_SUBJECT, "Tag": d.Shortcut, "Name": d.Name, "X": i},
-		)
-		idmap.Id2DBId[d.Id] = DBItem{i, base.RecordType_SUBJECT}
+		msg := fmt.Sprintf("Course %s in Subjects", nid)
+		sbjs := w365tt.GetRefList(id2node, n.Subjects, msg)
+		msg = fmt.Sprintf("Course %s in Groups", nid)
+		grps := w365tt.GetRefList(id2node, n.Groups, msg)
+		msg = fmt.Sprintf("Course %s in Teachers", nid)
+		tchs := w365tt.GetRefList(id2node, n.Teachers, msg)
+		msg = fmt.Sprintf("Course %s in PreferredRooms", nid)
+		rms := w365tt.GetRefList(id2node, n.PreferredRooms, msg)
+		outdata.Courses = append(outdata.Courses, w365tt.Course{
+			Id:             nid,
+			Type:           w365tt.TypeCOURSE,
+			Subjects:       sbjs,
+			Groups:         grps,
+			Teachers:       tchs,
+			PreferredRooms: rms,
+		})
 	}
 }
 
-func refList(idmap IdMap, rstring string) []interface{} {
-	var reflist []interface{}
-	if len(rstring) != 0 {
-//		for _, id := range strings.Split(rstring, ",") {
-		for _, id := range w365tt.GetRefList(rstring) {
-			n, ok := idmap.Id2Node[id]
-			if ok {
-				reflist = append(reflist, n)
-			} else {
-				log.Printf(" Bad Reference: %s\n", id)
-			}
+func readEpochPlanCourses(
+	outdata *w365tt.W365TopLevel,
+	id2node map[w365tt.W365Ref]interface{},
+	items []EpochPlanCourse,
+) {
+	// These are currently handled as normal Courses.
+	for _, n := range items {
+		nid := addId(id2node, &n)
+		if nid == "" {
+			continue
 		}
-	}
-	return reflist
-}
-
-func getAbsences(idmap IdMap, alist string) [][]int {
-	var absences [][]int
-	for _, n0 := range refList(idmap, alist) {
-		n := n0.(*Absence)
-		absences = append(absences, []int{n.Day, n.Hour})
-	}
-	return absences
-}
-
-func add_teachers(dbdata *base.DBData, idmap IdMap, items []Teacher) {
-	for i, d := range items {
-		r := base.Record{
-			"Type": base.RecordType_TEACHER, "Tag": d.Shortcut, "Name": d.Name,
-			"Firstname": d.Firstname, "X": i}
-		absences := getAbsences(idmap, d.Absences)
-		if len(absences) != 0 {
-			r["NotAvailable"] = absences
-		}
-		//TODO: Is it correct to put these here?
-		// They are not very hard constraints, but it might be helpful
-		// to have them closely associated with the teacher.
-		r["Constraints"] = map[string]int{
-			"MinHoursDaily":  d.MinLessonsPerDay,
-			"MaxHoursDaily":  d.MaxLessonsPerDay,
-			"MaxDaysPerWeek": d.MaxDays,
-			"MaxGapsPerDay":  d.MaxGapsPerDay,
-			"MaxAfternoons":  d.MaxAfternoons,
-			//TODO: Convert to "IntervalMaxDaysPerWeek"?
-			//TODO? "MaxGapsPerWeek": d.MaxGapsPerWeek,
-			//TODO? "MaxHoursDailyInInterval" for lunch break?
-		}
-		dbdata.AddRecord(r)
-		idmap.Id2DBId[d.Id] = DBItem{i, base.RecordType_TEACHER}
+		msg := fmt.Sprintf("EpochPlanCourse %s in Subjects", nid)
+		sbjs := w365tt.GetRefList(id2node, n.Subjects, msg)
+		msg = fmt.Sprintf("EpochPlanCourse %s in Groups", nid)
+		grps := w365tt.GetRefList(id2node, n.Groups, msg)
+		msg = fmt.Sprintf("EpochPlanCourse %s in Teachers", nid)
+		tchs := w365tt.GetRefList(id2node, n.Teachers, msg)
+		msg = fmt.Sprintf("EpochPlanCourse %s in PreferredRooms", nid)
+		rms := w365tt.GetRefList(id2node, n.PreferredRooms, msg)
+		outdata.Courses = append(outdata.Courses, w365tt.Course{
+			Id:             nid,
+			Type:           w365tt.TypeCOURSE,
+			Subjects:       sbjs,
+			Groups:         grps,
+			Teachers:       tchs,
+			PreferredRooms: rms,
+		})
 	}
 }
 
-func add_rooms(dbdata *base.DBData, idmap IdMap, items []Room) {
-	for i, d := range items {
-		if len(d.RoomGroups) == 0 {
-			r := base.Record{
-				"Type": base.RecordType_ROOM, "Tag": d.Shortcut, "Name": d.Name, "X": i}
-			absences := getAbsences(idmap, d.Absences)
-			if len(absences) != 0 {
-				r["NotAvailable"] = absences
-			}
-			dbdata.AddRecord(r)
-			idmap.Id2DBId[d.Id] = DBItem{i, base.RecordType_ROOM}
-		} else {
-			var rlist []int
-//			for _, r := range strings.Split(d.RoomGroups, ",") {
-msg := fmt.Sprintf(" *PROBLEM* Bad Room reference in RoomGroup %s:\n  %s",
-						d.Id, "%s")
-			for _, r := range w365tt.GetRefList(id2node, d.RoomGroups, msg) {
-				ritem, ok := idmap.Id2DBId[r]
-				if !ok || ritem.Type != base.RecordType_ROOM {
-					log.Printf(
-						" *PROBLEM* Bad Room reference in RoomGroup %s:\n  %s",
-						d.Id, r)
-				} else {
-					rlist = append(rlist, ritem.Id)
-				}
-			}
-			idmap.Id2RoomList[d.Id] = rlist
+func readLessons(
+	outdata *w365tt.W365TopLevel,
+	id2node map[w365tt.W365Ref]interface{},
+	items []Lesson,
+) {
+	for _, n := range items {
+		nid := addId(id2node, &n)
+		if nid == "" {
+			continue
 		}
+		if _, ok := id2node[n.Course]; !ok {
+			log.Printf("Lesson with invalid Course: %s\n", nid)
+			continue
+		}
+		dur := 1
+		if n.DoubleLesson {
+			// Currently none, pending changes
+			dur = 2
+		}
+		msg := fmt.Sprintf("Course %s in LocalRooms", nid)
+		outdata.Lessons = append(outdata.Lessons, w365tt.Lesson{
+			Id:         nid,
+			Type:       w365tt.TypeLESSON,
+			Course:     n.Course,
+			Duration:   dur,
+			Day:        n.Day,
+			Hour:       n.Hour,
+			Fixed:      n.Fixed,
+			LocalRooms: w365tt.GetRefList(id2node, n.LocalRooms, msg),
+		})
 	}
 }
-
-func add_groups(dbdata *base.DBData, idmap IdMap, items []Group) {
-	for i, d := range items {
-		dbdata.AddRecord(base.Record{
-			"Type": base.RecordType_GROUP, "Tag": d.Shortcut, "Name": d.Name, "X": i},
-		)
-		idmap.Id2DBId[d.Id] = DBItem{i, base.RecordType_GROUP}
-	}
-}
-
-// TODO: Can these be handled later, when actually using them?
-func add_divisions(dbdata *base.DBData, idmap IdMap, items []Division) {
-	for _, d := range items {
-		// d.Groups
-		// d.Name
-		var glist []int
-		for _, g := range strings.Split(d.Groups, ",") {
-			gitem, ok := idmap.Id2DBId[g]
-			if !ok || gitem.Type != base.RecordType_GROUP {
-				log.Printf(
-					" *PROBLEM* Bad Group reference in RoomGroup %s:\n  %s",
-					d.Id, g)
-			} else {
-				glist = append(glist, gitem.Id)
-			}
-		}
-		//		idmap.Id2Division[d.Id] = (d.Name, glist)
-	}
-}
-
-func add_classes(dbdata *base.DBData, idmap IdMap, items []Class) {
-	for i, d := range items {
-		r := base.Record{
-			"Type": base.RecordType_CLASS, "Tag": d.Tag(), "Name": d.Name, "X": i}
-		absences := getAbsences(idmap, d.Absences)
-		if len(absences) != 0 {
-			r["NotAvailable"] = absences
-		}
-		//Divisions        string
-		//TODO: Can these use the raw structures?
-
-		var plist []map[string]interface{}
-		for _, p := range strings.Split(d.Divisions, ",") {
-			pitem, ok := idmap.Id2GroupList[p]
-			if !ok {
-				log.Printf(
-					" *PROBLEM* Bad Division reference in Class %s:\n  %s",
-					d.Id, p)
-			} else {
-				plist = append(plist, map[string]interface{}{pitem})
-			}
-		}
-
-		//TODO: Set field. Also correct structure.
-
-		/* ForceFirstHour   bool
-		If this is true, the following FET constraint should probably be set with
-		Max_Beginnings... = 0. If false, I guess that means without the constraint.
-			<ConstraintStudentsSetEarlyMaxBeginningsAtSecondHour>
-				<Weight_Percentage>100</Weight_Percentage>
-				<Max_Beginnings_At_Second_Hour>0</Max_Beginnings_At_Second_Hour>
-				<Students>1</Students>
-				<Active>true</Active>
-				<Comments></Comments>
-			</ConstraintStudentsSetEarlyMaxBeginningsAtSecondHour>
-*/
-//TODO: Is it correct to put these here?
-// They are not very hard constraints, but it might be helpful
-// to have them closely associated with the teacher.
-/*
-		ffh := 0 // Use an int for ForceFirstHour to match the value type
-		// of the other Constraints.
-		if d.ForceFirstHour {
-			ffh = 1
-		}
-		r["Constraints"] = map[string]int{
-			"MinHoursDaily": d.MinLessonsPerDay,
-			"MaxHoursDaily": d.MaxLessonsPerDay,
-			//(TODO? "MaxGapsPerDay":  d.MaxGapsPerDay,)
-			"MaxAfternoons": d.MaxAfternoons,
-			//TODO: Convert to "IntervalMaxDaysPerWeek"?
-			//TODO? "MaxGapsPerWeek": d.MaxGapsPerWeek,
-			//TODO? "MaxHoursDailyInInterval" for lunch break?
-			"ForceFirstHour": ffh,
-		}
-		dbdata.AddRecord(r)
-		idmap.Id2DBId[d.Id] = DBItem{i, base.RecordType_CLASS}
-	}
-}
-*/

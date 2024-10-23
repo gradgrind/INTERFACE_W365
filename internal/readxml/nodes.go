@@ -9,7 +9,7 @@ import (
 // The structures used for reading a timetable-source file exported by W365.
 
 type TTNode interface {
-	IdStr() string
+	IdStr() w365tt.W365Ref
 }
 
 type Day struct {
