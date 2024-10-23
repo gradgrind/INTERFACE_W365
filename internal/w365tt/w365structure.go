@@ -1,5 +1,10 @@
 package w365tt
 
+import (
+	"log"
+	"strings"
+)
+
 // The structures used for reading a timetable-source file exported by W365.
 
 const (
@@ -17,7 +22,30 @@ const (
 	TypeLESSON      string = "Lesson"
 )
 
-type W365Ref string // Element reference
+type W365Ref string     // Element reference
+type W365RefList string // "List" of Element references
+
+func GetRefList(
+	id2node map[W365Ref]interface{},
+	reflist W365RefList,
+	messages ...string,
+) []W365Ref {
+	var rl []W365Ref
+	if reflist != "" {
+		for _, rs := range strings.Split(string(reflist), ",") {
+			rr := W365Ref(rs)
+			if _, ok := id2node[rr]; ok {
+				rl = append(rl, rr)
+			} else {
+				log.Printf("Invalid Reference in RefList: %s\n", rs)
+				for _, msg := range messages {
+					log.Printf("  ++ %s\n", msg)
+				}
+			}
+		}
+	}
+	return rl
+}
 
 type TTNode interface {
 	// An interface for Top-Level-Elements with Id field

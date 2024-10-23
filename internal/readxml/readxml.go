@@ -9,6 +9,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"slices"
 	"strconv"
 	"strings"
 )
@@ -128,33 +129,56 @@ func readTeachers(
 	items []Teacher,
 ) {
 	for _, n := range items {
-		id2node[n.IdStr()] = n
+		nid := n.IdStr()
+		id2node[nid] = n
 
 		r := w365tt.Teacher{
-			Id:        n.IdStr(),
-			Type:      w365tt.TypeTEACHER,
-			Name:      n.Name,
-			Shortcut:  n.Shortcut,
-			Firstname: n.Firstname,
+			Id:               nid,
+			Type:             w365tt.TypeTEACHER,
+			Name:             n.Name,
+			Shortcut:         n.Shortcut,
+			Firstname:        n.Firstname,
+			MinLessonsPerDay: n.MinLessonsPerDay,
+			MaxLessonsPerDay: n.MaxLessonsPerDay,
+			MaxDays:          n.MaxDays,
+			MaxGapsPerDay:    n.MaxGapsPerDay,
+			MaxAfternoons:    n.MaxAfternoons,
 		}
-		//TODO: Sort the Absences?
-		if len(n.Absences) != 0 {
-			for _, ai := range strings.Split(n.Absences, ",") {
-				an, ok := id2node[w365tt.W365Ref(ai)]
-				if ok {
-					r.Absences = append(r.Absences, w365tt.Absence{
-						Day:  an.(Absence).Day,
-						Hour: an.(Absence).Hour,
-					})
-				}
-
-			}
+		msg := fmt.Sprintf("Teacher %s in Absences", nid)
+		for _, ai := range w365tt.GetRefList(id2node, n.Absences, msg) {
+			an := id2node[ai]
+			r.Absences = append(r.Absences, w365tt.Absence{
+				Day:  an.(Absence).Day,
+				Hour: an.(Absence).Hour,
+			})
 		}
+		sortAbsences(r.Absences)
 
 		//TODO ...
+		/*
+			LunchBreak       bool
 
+		*/
 		outdata.Teachers = append(outdata.Teachers, r)
 	}
+}
+
+func sortAbsences(alist []w365tt.Absence) {
+	slices.SortFunc(alist, func(a, b w365tt.Absence) int {
+		if a.Day < b.Day {
+			return -1
+		}
+		if a.Day == b.Day {
+			if a.Hour < b.Hour {
+				return -1
+			}
+			if a.Hour == b.Hour {
+				log.Fatalln("Equal Absences")
+			}
+			return 1
+		}
+		return 1
+	})
 }
 
 // TODO
@@ -164,29 +188,25 @@ func readClasses(
 	items []Class,
 ) {
 	for _, n := range items {
-		id2node[n.IdStr()] = n
+		nid := n.IdStr()
+		id2node[nid] = n
 
 		r := w365tt.Class{
-			Id:   n.IdStr(),
+			Id:   nid,
 			Type: w365tt.TypeCLASS,
 			Name: n.Name,
 			//TODO: Construct this from Level and Letter
 			//			Shortcut: n.Shortcut,
 		}
-		//TODO: Sort the Absences?
-		if len(n.Absences) != 0 {
-			for _, ai := range strings.Split(n.Absences, ",") {
-				an, ok := id2node[w365tt.W365Ref(ai)]
-				if ok {
-					r.Absences = append(r.Absences, w365tt.Absence{
-						Day:  an.(Absence).Day,
-						Hour: an.(Absence).Hour,
-					})
-				}
-
-			}
+		msg := fmt.Sprintf("Class %s in Absences", nid)
+		for _, ai := range w365tt.GetRefList(id2node, n.Absences, msg) {
+			an := id2node[ai]
+			r.Absences = append(r.Absences, w365tt.Absence{
+				Day:  an.(Absence).Day,
+				Hour: an.(Absence).Hour,
+			})
 		}
-
+		sortAbsences(r.Absences)
 		outdata.Classes = append(outdata.Classes, r)
 	}
 }
@@ -264,7 +284,8 @@ func makeIdMap(w365 *W365TTXML) IdMap {
 	gid_c := map[string]*Class{}
 	for i := 0; i < len(w365.Classes); i++ {
 		c := &(w365.Classes[i])
-		for _, gid := range strings.Split(c.Groups, ",") {
+//		for _, gid := range strings.Split(c.Groups, ",") {
+		for _, gid := range w365tt.GetRefList(c.Groups) {
 			gid_c[gid] = c
 		}
 	}
@@ -304,7 +325,8 @@ func add_subjects(dbdata *base.DBData, idmap IdMap, items []Subject) {
 func refList(idmap IdMap, rstring string) []interface{} {
 	var reflist []interface{}
 	if len(rstring) != 0 {
-		for _, id := range strings.Split(rstring, ",") {
+//		for _, id := range strings.Split(rstring, ",") {
+		for _, id := range w365tt.GetRefList(rstring) {
 			n, ok := idmap.Id2Node[id]
 			if ok {
 				reflist = append(reflist, n)
@@ -365,7 +387,10 @@ func add_rooms(dbdata *base.DBData, idmap IdMap, items []Room) {
 			idmap.Id2DBId[d.Id] = DBItem{i, base.RecordType_ROOM}
 		} else {
 			var rlist []int
-			for _, r := range strings.Split(d.RoomGroups, ",") {
+//			for _, r := range strings.Split(d.RoomGroups, ",") {
+msg := fmt.Sprintf(" *PROBLEM* Bad Room reference in RoomGroup %s:\n  %s",
+						d.Id, "%s")
+			for _, r := range w365tt.GetRefList(id2node, d.RoomGroups, msg) {
 				ritem, ok := idmap.Id2DBId[r]
 				if !ok || ritem.Type != base.RecordType_ROOM {
 					log.Printf(
