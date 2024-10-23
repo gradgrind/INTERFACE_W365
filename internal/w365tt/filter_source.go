@@ -6,9 +6,6 @@ import (
 	"strings"
 )
 
-// Might not be necessary: Filter out all Divisions where none of the groups
-// are used by a course.
-
 // Courses with more than one subject:
 // Create a new subject (e.g. "Xn"). It's Name field could be built from
 // the list of subjects. Use a cache to check for repeats. Replace the lists
@@ -80,5 +77,45 @@ func Multisubjects(w365 *W365TopLevel) {
 			cache[sname] = sid
 		}
 		w365.SubCourses[i].Subjects = []W365Ref{sid}
+	}
+}
+
+// Might not be necessary: Filter out all Divisions where none of the groups
+// are used by a course.
+
+// This version doesn't actually strip, it just reports.
+func StripDivisions(w365 *W365TopLevel) {
+	// First gather references to all Group nodes, setting their count to 0.
+	gcount := map[W365Ref]int{}
+	for _, g := range w365.Groups {
+		gcount[g.IdStr()] = 0
+	}
+	// Now collect the used Groups (not Classes)
+	for _, crs := range w365.Courses {
+		for _, gr := range crs.Groups {
+			if _, ok := gcount[gr]; ok {
+				gcount[gr]++
+			}
+		}
+	}
+	// Now go through the classes checking the divisions.
+	for _, c := range w365.Classes {
+		for _, d := range c.Divisions {
+			used := false
+			for i, gr := range d.Groups {
+				if gcount[gr] != 0 {
+					used = true
+					fmt.Printf("** %s / %s, %d: %d\n",
+						c.Shortcut, d.Name, i+1, gcount[gr])
+				} else {
+					log.Printf("In Class %s, Division %s:\n  Group %s not used.\n",
+						c.Shortcut, d.Name, gr)
+				}
+			}
+			if !used {
+				log.Printf("In Class %s: Division %s has no courses.\n",
+					c.Shortcut, d.Name)
+			}
+		}
 	}
 }

@@ -58,6 +58,7 @@ func ConvertToJSON(f365xml string) string {
 	// Currently no SuperCourses, SubCourses or Constraints
 
 	w365tt.Multisubjects(&outdata)
+	w365tt.StripDivisions(&outdata)
 
 	// Save as JSON
 	f := strings.TrimSuffix(indata.Path, filepath.Ext(indata.Path)) + ".json"
