@@ -69,14 +69,14 @@ func (n *Day) IdStr() W365Ref {
 }
 
 type Hour struct {
-	Id       W365Ref
-	Type     string
-	Name     string
-	Shortcut string
-	Start    string
-	End      string
-	//FirstAfternoonHour bool
-	//MiddayBreak        bool
+	Id                 W365Ref
+	Type               string
+	Name               string
+	Shortcut           string
+	Start              string
+	End                string
+	FirstAfternoonHour bool // default = false
+	MiddayBreak        bool // default = false
 }
 
 func (n *Hour) IdStr() W365Ref {

@@ -3,6 +3,7 @@ package w365tt
 import (
 	"encoding/json"
 	"fmt"
+	"gradgrind/INTERFACE_W365/internal/db"
 	"io"
 	"log"
 	"os"
@@ -31,18 +32,80 @@ func ReadJSON(jsonpath string) W365TopLevel {
 	return v
 }
 
-// TODO: This should probably be in the fet package!
-type FETData struct {
+type xData struct {
+	w365  W365TopLevel
+	data  db.DbTopLevel
+	dbi   db.DbRef
+	idmap map[W365Ref]db.DbRef
 }
 
-// Subjects -> Subject conversion
-func LoadJSON(jsonpath string) FETData {
-	//	toplevel := ReadJSON(jsonpath)
-	fetdata := FETData{}
-	return fetdata
+func LoadJSON(jsonpath string) db.DbTopLevel {
+	dbdata := xData{
+		w365:  ReadJSON(jsonpath),
+		data:  db.DbTopLevel{},
+		dbi:   0,
+		idmap: map[W365Ref]db.DbRef{},
+	}
+
+	dbdata.addInfo()
+	dbdata.addDays()
+	dbdata.addHours()
+
+	return dbdata.data
+}
+
+func (dbdata *xData) nextId(w365Id W365Ref) db.DbRef {
+	dbdata.dbi++
+	dbdata.idmap[w365Id] = dbdata.dbi
+	return dbdata.dbi
+}
+
+func (dbdata *xData) addInfo() {
+	dbdata.data.Info = db.Info{
+		FirstAfternoonHour: dbdata.w365.W365TT.FirstAfternoonHour,
+		MiddayBreak:        dbdata.w365.W365TT.MiddayBreak,
+	}
+}
+
+func (dbdata *xData) addDays() {
+	for _, d := range dbdata.w365.Days {
+		dbdata.data.Days = append(dbdata.data.Days, db.Day{
+			Id:   dbdata.nextId(d.Id),
+			Type: db.TypeDAY,
+			Tag:  d.Shortcut,
+			Name: d.Name,
+		})
+	}
+}
+
+func (dbdata *xData) addHours() {
+	mdbok := len(dbdata.data.Info.MiddayBreak) == 0
+	for i, d := range dbdata.w365.Hours {
+		if d.FirstAfternoonHour {
+			dbdata.data.Info.FirstAfternoonHour = i
+		}
+		if d.MiddayBreak {
+			if mdbok {
+				dbdata.data.Info.MiddayBreak = append(
+					dbdata.data.Info.MiddayBreak, i)
+			} else {
+				fmt.Printf("*ERROR* MiddayBreak set in Info AND Hours")
+			}
+		}
+
+		dbdata.data.Hours = append(dbdata.data.Hours, db.Hour{
+			Id:    dbdata.nextId(d.Id),
+			Type:  db.TypeHOUR,
+			Tag:   d.Shortcut,
+			Name:  d.Name,
+			Start: d.Start,
+			End:   d.End,
+		})
+	}
 }
 
 func DeMultipleSubjects(w365 *W365TopLevel) {
+	/* Subjects -> Subject conversion */
 	// First gather keys for all Subject nodes.
 	subject2key := map[W365Ref]string{}
 	for _, s := range w365.Subjects {
