@@ -43,28 +43,22 @@ type xData struct {
 	w365        W365TopLevel
 	data        db.DbTopLevel
 	dbi         db.DbRef
-	idmap       map[W365Ref]db.DbRef
-	divgroups   map[db.DbRef]int    // count usage in courses
-	classes     map[db.DbRef]int    // count usage in courses
-	subjectmap  map[W365Ref]string  // Subject Tag (Shortcut)
-	newsubjects map[string]db.DbRef // Subject's db Id
-}
-
-func (dbdata *xData) getId(wref W365Ref, msg string) db.DbRef {
-	id, ok := dbdata.idmap[wref]
-	if ok {
-		return id
-	}
-	fmt.Printf("*ERROR* Unknown W365-Id: %s\n  ++ %s\n", wref, msg)
-	return 0
+	teachers    map[W365Ref]db.DbRef
+	subjects    map[W365Ref]db.DbRef
+	subjectmap  map[W365Ref]string // Subject Tag (Shortcut)
+	rooms       map[W365Ref]db.DbRef
+	groups      map[W365Ref]db.DbRef
+	classes     map[W365Ref]db.DbRef
+	divgroups   map[db.DbRef]int // count usage in courses
+	courses     map[W365Ref]db.DbRef
+	newsubjects map[string]db.DbRef // New Subject name -> db Id
 }
 
 func LoadJSON(jsonpath string) db.DbTopLevel {
 	dbdata := xData{
-		w365:  ReadJSON(jsonpath),
-		data:  db.DbTopLevel{},
-		dbi:   0,
-		idmap: map[W365Ref]db.DbRef{},
+		w365: ReadJSON(jsonpath),
+		data: db.DbTopLevel{},
+		dbi:  0,
 	}
 
 	dbdata.addInfo()
@@ -84,11 +78,8 @@ func LoadJSON(jsonpath string) db.DbTopLevel {
 	return dbdata.data
 }
 
-func (dbdata *xData) nextId(w365Id W365Ref) db.DbRef {
+func (dbdata *xData) nextId() db.DbRef {
 	dbdata.dbi++
-	if w365Id != "" {
-		dbdata.idmap[w365Id] = dbdata.dbi
-	}
 	return dbdata.dbi
 }
 
@@ -102,7 +93,7 @@ func (dbdata *xData) addInfo() {
 func (dbdata *xData) addDays() {
 	for _, d := range dbdata.w365.Days {
 		dbdata.data.Days = append(dbdata.data.Days, db.Day{
-			Id:   dbdata.nextId(d.Id),
+			Id:   dbdata.nextId(),
 			Tag:  d.Shortcut,
 			Name: d.Name,
 		})
@@ -124,7 +115,7 @@ func (dbdata *xData) addHours() {
 			}
 		}
 		dbdata.data.Hours = append(dbdata.data.Hours, db.Hour{
-			Id:    dbdata.nextId(d.Id),
+			Id:    dbdata.nextId(),
 			Tag:   d.Shortcut,
 			Name:  d.Name,
 			Start: d.Start,
@@ -134,13 +125,15 @@ func (dbdata *xData) addHours() {
 }
 
 func (dbdata *xData) addTeachers() {
+	dbdata.teachers = map[W365Ref]db.DbRef{}
 	for _, d := range dbdata.w365.Teachers {
 		a := d.Absences
 		if len(d.Absences) == 0 {
 			a = []db.TimeSlot{}
 		}
+		tr := dbdata.nextId()
 		dbdata.data.Teachers = append(dbdata.data.Teachers, db.Teacher{
-			Id:               dbdata.nextId(d.Id),
+			Id:               tr,
 			Tag:              d.Shortcut,
 			Name:             d.Name,
 			Firstname:        d.Firstname,
@@ -153,49 +146,64 @@ func (dbdata *xData) addTeachers() {
 			MaxAfternoons:    defaultMinus1(d.MaxAfternoons),
 			LunchBreak:       d.LunchBreak,
 		})
+		dbdata.teachers[d.Id] = tr
 	}
 }
 
 func (dbdata *xData) addSubjects() {
+	dbdata.subjects = map[W365Ref]db.DbRef{}
+	dbdata.newsubjects = map[string]db.DbRef{}
 	dbdata.subjectmap = map[W365Ref]string{}
 	for _, d := range dbdata.w365.Subjects {
+		sr := dbdata.nextId()
 		dbdata.data.Subjects = append(dbdata.data.Subjects, db.Subject{
-			Id:   dbdata.nextId(d.Id),
+			Id:   sr,
 			Tag:  d.Shortcut,
 			Name: d.Name,
 		})
+		dbdata.subjects[d.Id] = sr
 		dbdata.subjectmap[d.Id] = d.Shortcut
 	}
 }
 
 func (dbdata *xData) addRooms() {
+	dbdata.rooms = map[W365Ref]db.DbRef{}
 	for _, d := range dbdata.w365.Rooms {
 		a := d.Absences
 		if len(d.Absences) == 0 {
 			a = []db.TimeSlot{}
 		}
+		rr := dbdata.nextId()
 		dbdata.data.Rooms = append(dbdata.data.Rooms, db.Room{
-			Id:           dbdata.nextId(d.Id),
+			Id:           rr,
 			Tag:          d.Shortcut,
 			Name:         d.Name,
 			NotAvailable: a,
 		})
+		dbdata.rooms[d.Id] = rr
 	}
 }
 
 func (dbdata *xData) addGroups() {
-	// Every Group must be a member of a Class Division.
+	dbdata.groups = map[W365Ref]db.DbRef{}
+	dbdata.divgroups = map[db.DbRef]int{} //TODO: Key should be W365Ref?
+	// Every Group must be a member of a Class Division. Every Group gets an
+	// initial entry of -1 in divgroups, which is modified to 0 when it is
+	// found in a Division. Later, these are incremented when Lessons are
+	// found to be using them.
 	for _, d := range dbdata.w365.Groups {
+		gr := dbdata.nextId()
 		dbdata.data.Groups = append(dbdata.data.Groups, db.Group{
-			Id:  dbdata.nextId(d.Id),
+			Id:  gr,
 			Tag: d.Shortcut,
 		})
+		dbdata.groups[d.Id] = gr
+		dbdata.divgroups[gr] = -1
 	}
 }
 
 func (dbdata *xData) addClasses() {
-	dbdata.divgroups = map[db.DbRef]int{}
-	dbdata.classes = map[db.DbRef]int{}
+	dbdata.classes = map[W365Ref]db.DbRef{}
 	for _, d := range dbdata.w365.Classes {
 		a := d.Absences
 		if len(d.Absences) == 0 {
@@ -207,12 +215,13 @@ func (dbdata *xData) addClasses() {
 		for _, wdiv := range d.Divisions {
 			glist := []db.DbRef{}
 			for _, g := range wdiv.Groups {
-				msg := fmt.Sprintf("Unknown Group in Class %s, Division %s",
-					d.Shortcut, wdiv.Name)
-				gr := dbdata.getId(g, msg)
-				if gr != 0 {
+				gr, ok := dbdata.groups[g]
+				if ok {
 					glist = append(glist, gr)
 					dbdata.divgroups[gr] = 0
+				} else {
+					fmt.Printf("*ERROR* Unknown Group in Class %s,"+
+						" Division %s:\n  %s\n", d.Shortcut, wdiv.Name, g)
 				}
 			}
 			divs = append(divs, db.Division{
@@ -220,9 +229,9 @@ func (dbdata *xData) addClasses() {
 				Groups: glist,
 			})
 		}
-		cid := dbdata.nextId(d.Id)
+		cr := dbdata.nextId()
 		dbdata.data.Classes = append(dbdata.data.Classes, db.Class{
-			Id:               cid,
+			Id:               cr,
 			Name:             d.Name,
 			Tag:              d.Shortcut,
 			Level:            d.Level,
@@ -237,21 +246,22 @@ func (dbdata *xData) addClasses() {
 			LunchBreak:       d.LunchBreak,
 			ForceFirstHour:   d.ForceFirstHour,
 		})
-		dbdata.classes[cid] = 0
+		dbdata.classes[d.Id] = cr
 	}
 }
 
 func (dbdata *xData) addCourses() {
+	dbdata.courses = map[W365Ref]db.DbRef{}
 	for _, d := range dbdata.w365.Courses {
 		// Deal with subject
 		var sr db.DbRef = 0
+		var ok bool
 		msg := "*ERROR* Course %s:\n  Unknown Subject: %s\n"
 		if d.Subject == "" {
 			if len(d.Subjects) == 1 {
 				wsid := d.Subjects[0]
-				if _, ok := dbdata.subjectmap[wsid]; ok {
-					sr = dbdata.idmap[wsid]
-				} else {
+				sr, ok = dbdata.subjects[wsid]
+				if !ok {
 					fmt.Printf(msg, d.Id, wsid)
 				}
 			} else if len(d.Subjects) > 1 {
@@ -267,17 +277,17 @@ func (dbdata *xData) addCourses() {
 					}
 				}
 				skname := strings.Join(sklist, ",")
-				sid, ok := dbdata.newsubjects[skname]
+				sr, ok = dbdata.newsubjects[skname]
 				if !ok {
 					sk := fmt.Sprintf("X%02d", len(dbdata.newsubjects)+1)
-					sid = dbdata.nextId("")
+					sr = dbdata.nextId()
 					dbdata.data.Subjects = append(dbdata.data.Subjects,
 						db.Subject{
-							Id:   sid,
+							Id:   sr,
 							Tag:  sk,
 							Name: skname,
 						})
-					dbdata.newsubjects[skname] = sid
+					dbdata.newsubjects[skname] = sr
 				}
 			}
 		} else {
@@ -286,9 +296,8 @@ func (dbdata *xData) addCourses() {
 					d.Id)
 			}
 			wsid := d.Subject
-			if _, ok := dbdata.subjectmap[wsid]; ok {
-				sr = dbdata.idmap[wsid]
-			} else {
+			sr, ok = dbdata.subjects[wsid]
+			if !ok {
 				fmt.Printf(msg, d.Id, wsid)
 			}
 		}
@@ -296,23 +305,30 @@ func (dbdata *xData) addCourses() {
 		//TODO: Only increment the counters if the course has lessons!
 		glist := []db.DbRef{}
 		for _, g := range d.Groups {
-			msg := fmt.Sprintf("*ERROR* Unknown group in Course %s", d.Id)
-			gid := dbdata.getId(g, msg)
-			if gid != 0 {
-				if _, ok := dbdata.divgroups[gid]; ok {
-					dbdata.divgroups[gid]++
-					//TODO: Could it be a group, but not in a division?
-					// If so, that would be ok, but the course shouldn't
-					// have any lessons!
-				} else if _, ok = dbdata.classes[gid]; ok {
-					dbdata.classes[gid]++
-				} else {
-					fmt.Printf("*ERROR* In Course %s,\n"+
-						"  -- Element is not a valid Group/Class: %s", d.Id, g)
-					continue
-				}
-				glist = append(glist, gid)
+			msg := fmt.Sprintf("*ERROR* Unknown group in Course %s:\n  %s",
+				d.Id, g)
+			gr, ok := dbdata.groups[g]
+			if !ok {
+				//TODO: Check for class!
+
+				fmt.Println(msg)
+				continue
 			}
+			//TODO
+			if _, ok := dbdata.divgroups[gid]; ok {
+				dbdata.divgroups[gid]++
+				//TODO: Could it be a group, but not in a division?
+				// If so, that would be ok, but the course shouldn't
+				// have any lessons!
+			} else if _, ok = dbdata.classes[gid]; ok {
+				dbdata.classes[gid]++
+			} else {
+				fmt.Printf("*ERROR* In Course %s,\n"+
+					"  -- Element is not a valid Group/Class: %s", d.Id, g)
+				continue
+			}
+			glist = append(glist, gid)
+
 		}
 		// Deal with teachers
 		tlist := []db.DbRef{}
@@ -323,12 +339,13 @@ func (dbdata *xData) addCourses() {
 					}
 		*/
 		dbdata.data.Courses = append(dbdata.data.Courses, db.Course{
-			Id:       dbdata.nextId(d.Id),
+			Id:       dbdata.nextId(),
 			Subject:  sr,
 			Groups:   glist,
 			Teachers: tlist,
 			//			Rooms: d.Rooms,
 		})
+		dbdata.courses[d.Id] = sr
 	}
 }
 
