@@ -90,4 +90,43 @@ func DeMultipleSubjects(w365 *W365TopLevel) {
 			}
 		}
 	}
+	for i, c := range w365.SubCourses {
+		if c.Subject == "" {
+			if len(c.Subjects) == 1 {
+				w365.SubCourses[i].Subject = c.Subjects[0]
+			} else if len(c.Subjects) > 1 {
+				// Make a subject name
+				sklist := []string{}
+				for _, sid := range c.Subjects {
+					sk, ok := subject2key[sid]
+					if ok {
+						sklist = append(sklist, sk)
+					} else {
+						fmt.Printf("*ERROR* Course %s:\n  Unknown Subject: %s\n",
+							c.IdStr(), sid)
+					}
+				}
+				skname := strings.Join(sklist, ",")
+				sid, ok := cache[skname]
+				if !ok {
+					n++
+					sk := fmt.Sprintf("X%02d", n)
+					sid = W365Ref(fmt.Sprintf("Id_%s", sk))
+					w365.Subjects = append(w365.Subjects, Subject{
+						Id:       sid,
+						Type:     TypeSUBJECT,
+						Name:     skname,
+						Shortcut: sk,
+					})
+					cache[skname] = sid
+					subject2key[sid] = sk
+
+				}
+				w365.SubCourses[i].Subject = sid
+			} else if len(c.Subjects) != 0 {
+				fmt.Printf("*ERROR* Course has both Subject AND Subjects: %s\n",
+					c.IdStr())
+			}
+		}
+	}
 }
