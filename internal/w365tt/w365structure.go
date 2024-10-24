@@ -8,21 +8,6 @@ import (
 
 // The structures used for reading a timetable-source file exported by W365.
 
-const (
-	TypeDAY         string = "Day"
-	TypeHOUR        string = "Hour"
-	TypeTEACHER     string = "Teacher"
-	TypeSUBJECT     string = "Subject"
-	TypeROOM        string = "Room"
-	TypeROOMGROUP   string = "RoomGroup"
-	TypeCLASS       string = "Class"
-	TypeGROUP       string = "Group"
-	TypeCOURSE      string = "Course"
-	TypeSUPERCOURSE string = "SuperCourse"
-	TypeSUBCOURSE   string = "SubCourse"
-	TypeLESSON      string = "Lesson"
-)
-
 type W365Ref string     // Element reference
 type W365RefList string // "List" of Element references
 

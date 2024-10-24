@@ -156,12 +156,12 @@ type Division struct {
 }
 
 type Course struct {
-	Id      DbRef
-	Type    string
-	Subject DbRef
-	Groups  []DbRef
-	Teacher DbRef
-	Rooms   []DbRef // Room and RoomChoiceGroup Elements permitted
+	Id       DbRef
+	Type     string
+	Subject  DbRef
+	Groups   []DbRef
+	Teachers []DbRef
+	Rooms    []DbRef // Room and RoomChoiceGroup Elements permitted
 }
 
 func (n *Course) IdStr() DbRef {
