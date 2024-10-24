@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"encoding/xml"
 	"fmt"
+	"gradgrind/INTERFACE_W365/internal/db"
 	"gradgrind/INTERFACE_W365/internal/w365tt"
 	"io"
 	"log"
@@ -194,7 +195,7 @@ func readRooms(
 			msg = fmt.Sprintf("Room %s in Absences", nid)
 			for _, ai := range w365tt.GetRefList(id2node, n.Absences, msg) {
 				an := id2node[ai]
-				r.Absences = append(r.Absences, w365tt.Absence{
+				r.Absences = append(r.Absences, db.TimeSlot{
 					Day:  an.(Absence).Day,
 					Hour: an.(Absence).Hour,
 				})
@@ -241,7 +242,7 @@ func readTeachers(
 		msg := fmt.Sprintf("Teacher %s in Absences", nid)
 		for _, ai := range w365tt.GetRefList(id2node, n.Absences, msg) {
 			an := id2node[ai]
-			r.Absences = append(r.Absences, w365tt.Absence{
+			r.Absences = append(r.Absences, db.TimeSlot{
 				Day:  an.(Absence).Day,
 				Hour: an.(Absence).Hour,
 			})
@@ -251,8 +252,8 @@ func readTeachers(
 	}
 }
 
-func sortAbsences(alist []w365tt.Absence) {
-	slices.SortFunc(alist, func(a, b w365tt.Absence) int {
+func sortAbsences(alist []db.TimeSlot) {
+	slices.SortFunc(alist, func(a, b db.TimeSlot) int {
 		if a.Day < b.Day {
 			return -1
 		}
@@ -315,7 +316,7 @@ func readClasses(
 		msg := fmt.Sprintf("Class %s in Absences", nid)
 		for _, ai := range w365tt.GetRefList(id2node, n.Absences, msg) {
 			an := id2node[ai]
-			r.Absences = append(r.Absences, w365tt.Absence{
+			r.Absences = append(r.Absences, db.TimeSlot{
 				Day:  an.(Absence).Day,
 				Hour: an.(Absence).Hour,
 			})

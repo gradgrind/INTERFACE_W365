@@ -50,6 +50,7 @@ func LoadJSON(jsonpath string) db.DbTopLevel {
 	dbdata.addInfo()
 	dbdata.addDays()
 	dbdata.addHours()
+	dbdata.addTeachers()
 
 	return dbdata.data
 }
@@ -92,7 +93,6 @@ func (dbdata *xData) addHours() {
 				fmt.Printf("*ERROR* MiddayBreak set in Info AND Hours")
 			}
 		}
-
 		dbdata.data.Hours = append(dbdata.data.Hours, db.Hour{
 			Id:    dbdata.nextId(d.Id),
 			Type:  db.TypeHOUR,
@@ -100,6 +100,30 @@ func (dbdata *xData) addHours() {
 			Name:  d.Name,
 			Start: d.Start,
 			End:   d.End,
+		})
+	}
+}
+
+func (dbdata *xData) addTeachers() {
+	for _, d := range dbdata.w365.Teachers {
+		a := d.Absences
+		if len(d.Absences) == 0 {
+			a = []db.TimeSlot{}
+		}
+		dbdata.data.Teachers = append(dbdata.data.Teachers, db.Teacher{
+			Id:               dbdata.nextId(d.Id),
+			Type:             db.TypeTEACHER,
+			Tag:              d.Shortcut,
+			Name:             d.Name,
+			Firstname:        d.Firstname,
+			NotAvailable:     a,
+			MinLessonsPerDay: d.MinLessonsPerDay,
+			MaxLessonsPerDay: d.MaxLessonsPerDay,
+			MaxDays:          d.MaxDays,
+			MaxGapsPerDay:    d.MaxGapsPerDay,
+			MaxGapsPerWeek:   d.MaxGapsPerWeek,
+			MaxAfternoons:    d.MaxAfternoons,
+			LunchBreak:       d.LunchBreak,
 		})
 	}
 }

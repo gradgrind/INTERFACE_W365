@@ -1,6 +1,7 @@
 package w365tt
 
 import (
+	"gradgrind/INTERFACE_W365/internal/db"
 	"log"
 	"strings"
 )
@@ -83,18 +84,13 @@ func (n *Hour) IdStr() W365Ref {
 	return n.Id
 }
 
-type Absence struct {
-	Day  int
-	Hour int
-}
-
 type Teacher struct {
 	Id               W365Ref
 	Type             string
 	Name             string
 	Shortcut         string
 	Firstname        string
-	Absences         []Absence
+	Absences         []db.TimeSlot
 	MinLessonsPerDay int
 	MaxLessonsPerDay int
 	MaxDays          int
@@ -124,7 +120,7 @@ type Room struct {
 	Type     string
 	Name     string
 	Shortcut string
-	Absences []Absence
+	Absences []db.TimeSlot
 }
 
 func (n *Room) IdStr() W365Ref {
@@ -150,7 +146,7 @@ type Class struct {
 	Shortcut         string
 	Level            int
 	Letter           string
-	Absences         []Absence
+	Absences         []db.TimeSlot
 	Divisions        []Division
 	MinLessonsPerDay int
 	MaxLessonsPerDay int
