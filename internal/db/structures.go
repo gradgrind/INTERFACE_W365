@@ -1,6 +1,7 @@
 package db
 
-// The structures used for reading a timetable-source file exported by W365.
+// The structures used for the "database"
+//TODO: Currently dealing only with the elements needed for the timetable
 
 const (
 	TypeDAY         string = "Day"
@@ -206,8 +207,8 @@ func (n *Lesson) IdStr() DbRef {
 	return n.Id
 }
 
-type W365TopLevel struct {
-	W365TT           Info
+type DbTopLevel struct {
+	Info             Info
 	Days             []Day
 	Hours            []Hour
 	Teachers         []Teacher
