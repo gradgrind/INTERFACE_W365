@@ -58,9 +58,6 @@ func ConvertToJSON(f365xml string) string {
 	readLessons(&outdata, id2node, indata.Lessons)
 	// Currently no SuperCourses, SubCourses or Constraints
 
-	//	w365tt.Multisubjects(&outdata)
-	//	w365tt.StripDivisions(&outdata)
-
 	// Save as JSON
 	f := strings.TrimSuffix(indata.Path, filepath.Ext(indata.Path)) + ".json"
 	j, err := json.MarshalIndent(outdata, "", "  ")
@@ -96,7 +93,6 @@ func readDays(
 		}
 		outdata.Days = append(outdata.Days, w365tt.Day{
 			Id:       nid,
-			Type:     db.TypeDAY,
 			Name:     n.Name,
 			Shortcut: n.Shortcut,
 		})
@@ -115,7 +111,6 @@ func readHours(
 		}
 		r := w365tt.Hour{
 			Id:       nid,
-			Type:     db.TypeHOUR,
 			Name:     n.Name,
 			Shortcut: n.Shortcut,
 		}
@@ -166,7 +161,6 @@ func readSubjects(
 		}
 		outdata.Subjects = append(outdata.Subjects, w365tt.Subject{
 			Id:       nid,
-			Type:     db.TypeSUBJECT,
 			Name:     n.Name,
 			Shortcut: n.Shortcut,
 		})
@@ -188,7 +182,6 @@ func readRooms(
 		if len(rg) == 0 {
 			r := w365tt.Room{
 				Id:       nid,
-				Type:     db.TypeROOM,
 				Name:     n.Name,
 				Shortcut: n.Shortcut,
 			}
@@ -205,7 +198,6 @@ func readRooms(
 		} else {
 			r := w365tt.RoomGroup{
 				Id:   nid,
-				Type: db.TypeROOMGROUP,
 				Name: n.Shortcut, // !
 				//Shortcut: n.Shortcut,
 				Rooms: rg,
@@ -227,7 +219,6 @@ func readTeachers(
 		}
 		r := w365tt.Teacher{
 			Id:               nid,
-			Type:             db.TypeTEACHER,
 			Name:             n.Name,
 			Shortcut:         n.Shortcut,
 			Firstname:        n.Firstname,
@@ -282,7 +273,6 @@ func readGroups(
 		}
 		outdata.Groups = append(outdata.Groups, w365tt.Group{
 			Id:       nid,
-			Type:     db.TypeGROUP,
 			Shortcut: n.Shortcut,
 		})
 	}
@@ -300,7 +290,6 @@ func readClasses(
 		}
 		r := w365tt.Class{
 			Id:               nid,
-			Type:             db.TypeCLASS,
 			Name:             n.Name,
 			Level:            n.Level,
 			Letter:           n.Letter,
@@ -364,7 +353,6 @@ func readCourses(
 		rms := w365tt.GetRefList(id2node, n.PreferredRooms, msg)
 		outdata.Courses = append(outdata.Courses, w365tt.Course{
 			Id:             nid,
-			Type:           db.TypeCOURSE,
 			Subjects:       sbjs,
 			Groups:         grps,
 			Teachers:       tchs,
@@ -394,7 +382,6 @@ func readEpochPlanCourses(
 		rms := w365tt.GetRefList(id2node, n.PreferredRooms, msg)
 		outdata.Courses = append(outdata.Courses, w365tt.Course{
 			Id:             nid,
-			Type:           db.TypeCOURSE,
 			Subjects:       sbjs,
 			Groups:         grps,
 			Teachers:       tchs,
@@ -425,7 +412,6 @@ func readLessons(
 		msg := fmt.Sprintf("Course %s in LocalRooms", nid)
 		outdata.Lessons = append(outdata.Lessons, w365tt.Lesson{
 			Id:         nid,
-			Type:       db.TypeLESSON,
 			Course:     n.Course,
 			Duration:   dur,
 			Day:        n.Day,

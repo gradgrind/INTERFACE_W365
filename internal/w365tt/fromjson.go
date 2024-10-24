@@ -32,6 +32,13 @@ func ReadJSON(jsonpath string) W365TopLevel {
 	return v
 }
 
+func defaultMinus1(v interface{}) int {
+	if v == nil {
+		return -1
+	}
+	return int(v.(float64))
+}
+
 type xData struct {
 	w365        W365TopLevel
 	data        db.DbTopLevel
@@ -96,7 +103,6 @@ func (dbdata *xData) addDays() {
 	for _, d := range dbdata.w365.Days {
 		dbdata.data.Days = append(dbdata.data.Days, db.Day{
 			Id:   dbdata.nextId(d.Id),
-			Type: db.TypeDAY,
 			Tag:  d.Shortcut,
 			Name: d.Name,
 		})
@@ -119,7 +125,6 @@ func (dbdata *xData) addHours() {
 		}
 		dbdata.data.Hours = append(dbdata.data.Hours, db.Hour{
 			Id:    dbdata.nextId(d.Id),
-			Type:  db.TypeHOUR,
 			Tag:   d.Shortcut,
 			Name:  d.Name,
 			Start: d.Start,
@@ -136,27 +141,26 @@ func (dbdata *xData) addTeachers() {
 		}
 		dbdata.data.Teachers = append(dbdata.data.Teachers, db.Teacher{
 			Id:               dbdata.nextId(d.Id),
-			Type:             db.TypeTEACHER,
 			Tag:              d.Shortcut,
 			Name:             d.Name,
 			Firstname:        d.Firstname,
 			NotAvailable:     a,
-			MinLessonsPerDay: d.MinLessonsPerDay,
-			MaxLessonsPerDay: d.MaxLessonsPerDay,
-			MaxDays:          d.MaxDays,
-			MaxGapsPerDay:    d.MaxGapsPerDay,
-			MaxGapsPerWeek:   d.MaxGapsPerWeek,
-			MaxAfternoons:    d.MaxAfternoons,
+			MinLessonsPerDay: defaultMinus1(d.MinLessonsPerDay),
+			MaxLessonsPerDay: defaultMinus1(d.MaxLessonsPerDay),
+			MaxDays:          defaultMinus1(d.MaxDays),
+			MaxGapsPerDay:    defaultMinus1(d.MaxGapsPerDay),
+			MaxGapsPerWeek:   defaultMinus1(d.MaxGapsPerWeek),
+			MaxAfternoons:    defaultMinus1(d.MaxAfternoons),
 			LunchBreak:       d.LunchBreak,
 		})
 	}
 }
 
 func (dbdata *xData) addSubjects() {
+	dbdata.subjectmap = map[W365Ref]string{}
 	for _, d := range dbdata.w365.Subjects {
 		dbdata.data.Subjects = append(dbdata.data.Subjects, db.Subject{
 			Id:   dbdata.nextId(d.Id),
-			Type: db.TypeSUBJECT,
 			Tag:  d.Shortcut,
 			Name: d.Name,
 		})
@@ -172,7 +176,6 @@ func (dbdata *xData) addRooms() {
 		}
 		dbdata.data.Rooms = append(dbdata.data.Rooms, db.Room{
 			Id:           dbdata.nextId(d.Id),
-			Type:         db.TypeROOM,
 			Tag:          d.Shortcut,
 			Name:         d.Name,
 			NotAvailable: a,
@@ -181,17 +184,18 @@ func (dbdata *xData) addRooms() {
 }
 
 func (dbdata *xData) addGroups() {
+	// Every Group must be a member of a Class Division.
 	for _, d := range dbdata.w365.Groups {
 		dbdata.data.Groups = append(dbdata.data.Groups, db.Group{
-			Id:   dbdata.nextId(d.Id),
-			Type: db.TypeGROUP,
-			Tag:  d.Shortcut,
+			Id:  dbdata.nextId(d.Id),
+			Tag: d.Shortcut,
 		})
 	}
 }
 
 func (dbdata *xData) addClasses() {
 	dbdata.divgroups = map[db.DbRef]int{}
+	dbdata.classes = map[db.DbRef]int{}
 	for _, d := range dbdata.w365.Classes {
 		a := d.Absences
 		if len(d.Absences) == 0 {
@@ -219,18 +223,17 @@ func (dbdata *xData) addClasses() {
 		cid := dbdata.nextId(d.Id)
 		dbdata.data.Classes = append(dbdata.data.Classes, db.Class{
 			Id:               cid,
-			Type:             db.TypeCLASS,
 			Name:             d.Name,
 			Tag:              d.Shortcut,
 			Level:            d.Level,
 			Letter:           d.Letter,
 			NotAvailable:     a,
 			Divisions:        divs,
-			MinLessonsPerDay: d.MinLessonsPerDay,
-			MaxLessonsPerDay: d.MaxLessonsPerDay,
-			MaxGapsPerDay:    d.MaxGapsPerDay,
-			MaxGapsPerWeek:   d.MaxGapsPerWeek,
-			MaxAfternoons:    d.MaxAfternoons,
+			MinLessonsPerDay: defaultMinus1(d.MinLessonsPerDay),
+			MaxLessonsPerDay: defaultMinus1(d.MaxLessonsPerDay),
+			MaxGapsPerDay:    defaultMinus1(d.MaxGapsPerDay),
+			MaxGapsPerWeek:   defaultMinus1(d.MaxGapsPerWeek),
+			MaxAfternoons:    defaultMinus1(d.MaxAfternoons),
 			LunchBreak:       d.LunchBreak,
 			ForceFirstHour:   d.ForceFirstHour,
 		})
@@ -271,7 +274,6 @@ func (dbdata *xData) addCourses() {
 					dbdata.data.Subjects = append(dbdata.data.Subjects,
 						db.Subject{
 							Id:   sid,
-							Type: db.TypeSUBJECT,
 							Tag:  sk,
 							Name: skname,
 						})
@@ -306,7 +308,7 @@ func (dbdata *xData) addCourses() {
 					dbdata.classes[gid]++
 				} else {
 					fmt.Printf("*ERROR* In Course %s,\n"+
-						"  -- Element is not a valid Group/Class", d.Id, g)
+						"  -- Element is not a valid Group/Class: %s", d.Id, g)
 					continue
 				}
 				glist = append(glist, gid)
@@ -314,14 +316,14 @@ func (dbdata *xData) addCourses() {
 		}
 		// Deal with teachers
 		tlist := []db.DbRef{}
-		for _, t := range d.Teachers {
-			// Check that it really is a teacher, add its tid
+		/*
+			        for _, t := range d.Teachers {
+						// Check that it really is a teacher, add its tid
 
-		}
-
+					}
+		*/
 		dbdata.data.Courses = append(dbdata.data.Courses, db.Course{
 			Id:       dbdata.nextId(d.Id),
-			Type:     db.TypeCOURSE,
 			Subject:  sr,
 			Groups:   glist,
 			Teachers: tlist,
@@ -367,7 +369,6 @@ func DeMultipleSubjects(w365 *W365TopLevel) {
 					sid = W365Ref(fmt.Sprintf("Id_%s", sk))
 					w365.Subjects = append(w365.Subjects, Subject{
 						Id:       sid,
-						Type:     db.TypeSUBJECT,
 						Name:     skname,
 						Shortcut: sk,
 					})
@@ -406,7 +407,6 @@ func DeMultipleSubjects(w365 *W365TopLevel) {
 					sid = W365Ref(fmt.Sprintf("Id_%s", sk))
 					w365.Subjects = append(w365.Subjects, Subject{
 						Id:       sid,
-						Type:     db.TypeSUBJECT,
 						Name:     skname,
 						Shortcut: sk,
 					})

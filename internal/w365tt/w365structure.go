@@ -45,7 +45,6 @@ type Info struct {
 
 type Day struct {
 	Id       W365Ref
-	Type     string
 	Name     string
 	Shortcut string
 }
@@ -56,7 +55,6 @@ func (n *Day) IdStr() W365Ref {
 
 type Hour struct {
 	Id                 W365Ref
-	Type               string
 	Name               string
 	Shortcut           string
 	Start              string
@@ -71,17 +69,16 @@ func (n *Hour) IdStr() W365Ref {
 
 type Teacher struct {
 	Id               W365Ref
-	Type             string
 	Name             string
 	Shortcut         string
 	Firstname        string
 	Absences         []db.TimeSlot
-	MinLessonsPerDay int
-	MaxLessonsPerDay int
-	MaxDays          int
-	MaxGapsPerDay    int
-	MaxGapsPerWeek   int
-	MaxAfternoons    int
+	MinLessonsPerDay interface{}
+	MaxLessonsPerDay interface{}
+	MaxDays          interface{}
+	MaxGapsPerDay    interface{}
+	MaxGapsPerWeek   interface{}
+	MaxAfternoons    interface{}
 	LunchBreak       bool
 }
 
@@ -91,7 +88,6 @@ func (n *Teacher) IdStr() W365Ref {
 
 type Subject struct {
 	Id       W365Ref
-	Type     string
 	Name     string
 	Shortcut string
 }
@@ -102,7 +98,6 @@ func (n *Subject) IdStr() W365Ref {
 
 type Room struct {
 	Id       W365Ref
-	Type     string
 	Name     string
 	Shortcut string
 	Absences []db.TimeSlot
@@ -114,7 +109,6 @@ func (n *Room) IdStr() W365Ref {
 
 type RoomGroup struct {
 	Id       W365Ref
-	Type     string
 	Name     string
 	Shortcut string
 	Rooms    []W365Ref
@@ -126,18 +120,17 @@ func (n *RoomGroup) IdStr() W365Ref {
 
 type Class struct {
 	Id               W365Ref
-	Type             string
 	Name             string
 	Shortcut         string
 	Level            int
 	Letter           string
 	Absences         []db.TimeSlot
 	Divisions        []Division
-	MinLessonsPerDay int
-	MaxLessonsPerDay int
-	MaxGapsPerDay    int
-	MaxGapsPerWeek   int
-	MaxAfternoons    int
+	MinLessonsPerDay interface{}
+	MaxLessonsPerDay interface{}
+	MaxGapsPerDay    interface{}
+	MaxGapsPerWeek   interface{}
+	MaxAfternoons    interface{}
 	LunchBreak       bool
 	ForceFirstHour   bool
 }
@@ -152,7 +145,6 @@ func (n *Class) IdStr() W365Ref {
 
 type Group struct {
 	Id       W365Ref
-	Type     string
 	Shortcut string
 }
 
@@ -167,7 +159,6 @@ type Division struct {
 
 type Course struct {
 	Id             W365Ref
-	Type           string
 	Subjects       []W365Ref // if present, will be converted to Subject
 	Subject        W365Ref
 	Groups         []W365Ref
@@ -181,7 +172,6 @@ func (n *Course) IdStr() W365Ref {
 
 type SuperCourse struct {
 	Id      W365Ref
-	Type    string
 	Subject W365Ref
 }
 
@@ -191,7 +181,6 @@ func (n *SuperCourse) IdStr() W365Ref {
 
 type SubCourse struct {
 	Id             W365Ref
-	Type           string
 	SuperCourse    W365Ref
 	Subjects       []W365Ref // if present, will be converted to Subject
 	Subject        W365Ref
@@ -206,7 +195,6 @@ func (n *SubCourse) IdStr() W365Ref {
 
 type Lesson struct {
 	Id         W365Ref
-	Type       string
 	Course     W365Ref
 	Duration   int
 	Day        int

@@ -3,21 +3,6 @@ package db
 // The structures used for the "database"
 //TODO: Currently dealing only with the elements needed for the timetable
 
-const (
-	TypeDAY         string = "Day"
-	TypeHOUR        string = "Hour"
-	TypeTEACHER     string = "Teacher"
-	TypeSUBJECT     string = "Subject"
-	TypeROOM        string = "Room"
-	TypeROOMGROUP   string = "RoomGroup"
-	TypeCLASS       string = "Class"
-	TypeGROUP       string = "Group"
-	TypeCOURSE      string = "Course"
-	TypeSUPERCOURSE string = "SuperCourse"
-	TypeSUBCOURSE   string = "SubCourse"
-	TypeLESSON      string = "Lesson"
-)
-
 type DbRef int // Element reference
 
 type TTNode interface {
@@ -32,7 +17,6 @@ type Info struct {
 
 type Day struct {
 	Id   DbRef
-	Type string
 	Name string
 	Tag  string
 }
@@ -43,7 +27,6 @@ func (n *Day) IdStr() DbRef {
 
 type Hour struct {
 	Id    DbRef
-	Type  string
 	Name  string
 	Tag   string
 	Start string
@@ -61,7 +44,6 @@ type TimeSlot struct {
 
 type Teacher struct {
 	Id               DbRef
-	Type             string
 	Name             string
 	Tag              string
 	Firstname        string
@@ -81,7 +63,6 @@ func (n *Teacher) IdStr() DbRef {
 
 type Subject struct {
 	Id   DbRef
-	Type string
 	Name string
 	Tag  string
 }
@@ -92,7 +73,6 @@ func (n *Subject) IdStr() DbRef {
 
 type Room struct {
 	Id           DbRef
-	Type         string
 	Name         string
 	Tag          string
 	NotAvailable []TimeSlot
@@ -104,7 +84,6 @@ func (n *Room) IdStr() DbRef {
 
 type RoomChoiceGroup struct {
 	Id    DbRef
-	Type  string
 	Name  string
 	Tag   string
 	Rooms []DbRef
@@ -116,7 +95,6 @@ func (n *RoomChoiceGroup) IdStr() DbRef {
 
 type Class struct {
 	Id               DbRef
-	Type             string
 	Name             string
 	Tag              string
 	Level            int
@@ -141,9 +119,8 @@ func (n *Class) IdStr() DbRef {
 //}
 
 type Group struct {
-	Id   DbRef
-	Type string
-	Tag  string
+	Id  DbRef
+	Tag string
 }
 
 func (n *Group) IdStr() DbRef {
@@ -157,7 +134,6 @@ type Division struct {
 
 type Course struct {
 	Id       DbRef
-	Type     string
 	Subject  DbRef
 	Groups   []DbRef
 	Teachers []DbRef
@@ -170,7 +146,6 @@ func (n *Course) IdStr() DbRef {
 
 type SuperCourse struct {
 	Id      DbRef
-	Type    string
 	Subject DbRef
 }
 
@@ -180,7 +155,6 @@ func (n *SuperCourse) IdStr() DbRef {
 
 type SubCourse struct {
 	Id          DbRef
-	Type        string
 	SuperCourse DbRef
 	Subject     DbRef
 	Groups      []DbRef
@@ -194,7 +168,6 @@ func (n *SubCourse) IdStr() DbRef {
 
 type Lesson struct {
 	Id       DbRef
-	Type     string
 	Course   DbRef
 	Duration int
 	Day      int

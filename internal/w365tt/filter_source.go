@@ -42,7 +42,6 @@ func Multisubjects(w365 *W365TopLevel) {
 			sid = W365Ref(fmt.Sprintf("Id_%s", tag))
 			w365.Subjects = append(w365.Subjects, Subject{
 				Id:       sid,
-				Type:     TypeSUBJECT,
 				Name:     sname,
 				Shortcut: tag,
 			})
@@ -70,7 +69,6 @@ func Multisubjects(w365 *W365TopLevel) {
 			sid = W365Ref(fmt.Sprintf("Id_%s", tag))
 			w365.Subjects = append(w365.Subjects, Subject{
 				Id:       sid,
-				Type:     TypeSUBJECT,
 				Name:     sname,
 				Shortcut: tag,
 			})
