@@ -25,6 +25,9 @@ func ReadJSON(jsonpath string) W365TopLevel {
 	if err != nil {
 		log.Fatalf("Could not unmarshal json: %s\n", err)
 	}
+
+	DeMultipleSubjects(&v)
+
 	return v
 }
 
@@ -34,7 +37,7 @@ type FETData struct {
 
 // Subjects -> Subject conversion
 func LoadJSON(jsonpath string) FETData {
-	toplevel := ReadJSON(jsonpath)
+	//	toplevel := ReadJSON(jsonpath)
 	fetdata := FETData{}
 	return fetdata
 }
