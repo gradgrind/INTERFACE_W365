@@ -45,4 +45,5 @@ func TestFromJSON(t *testing.T) {
 	if err := os.WriteFile(f, j, 0666); err != nil {
 		log.Fatal(err)
 	}
+	fmt.Printf("\n ***** JSON written to %s *****\n", f)
 }
