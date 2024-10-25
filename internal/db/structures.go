@@ -5,6 +5,7 @@ package db
 
 type DbRef int // Element reference
 
+// TODO: Is this interface really necessary? It is not used at present.
 type TTNode interface {
 	// An interface for Top-Level-Elements with Id field
 	IdStr() DbRef

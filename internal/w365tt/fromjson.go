@@ -26,9 +26,6 @@ func ReadJSON(jsonpath string) W365TopLevel {
 	if err != nil {
 		log.Fatalf("Could not unmarshal json: %s\n", err)
 	}
-
-	DeMultipleSubjects(&v)
-
 	return v
 }
 
@@ -40,18 +37,23 @@ func defaultMinus1(v interface{}) int {
 }
 
 type xData struct {
-	w365        W365TopLevel
-	data        db.DbTopLevel
-	dbi         db.DbRef
-	teachers    map[W365Ref]db.DbRef
-	subjects    map[W365Ref]db.DbRef
-	subjectmap  map[W365Ref]string // Subject Tag (Shortcut)
-	rooms       map[W365Ref]db.DbRef
-	groups      map[W365Ref]db.DbRef
-	classes     map[W365Ref]db.DbRef
-	divgroups   map[db.DbRef]int // count usage in courses
-	courses     map[W365Ref]db.DbRef
-	newsubjects map[string]db.DbRef // New Subject name -> db Id
+	w365         W365TopLevel
+	data         db.DbTopLevel
+	dbi          db.DbRef
+	teachers     map[W365Ref]db.DbRef
+	subjects     map[W365Ref]db.DbRef
+	subjectmap   map[W365Ref]string // Subject Tag (Shortcut)
+	rooms        map[W365Ref]db.DbRef
+	roomtag      map[db.DbRef]string    // Room Tag (Shortcut)
+	roomchoices  map[string]db.DbRef    // New RoomChoiceGroup name -> db Id
+	roomgroups   map[W365Ref][]db.DbRef // list of Rooms
+	groups       map[W365Ref]db.DbRef
+	classes      map[W365Ref]db.DbRef
+	divgroups    map[db.DbRef]int // count usage in courses
+	courses      map[W365Ref]db.DbRef
+	subcourses   map[W365Ref]db.DbRef
+	supercourses map[W365Ref]db.DbRef
+	newsubjects  map[string]db.DbRef // New Subject name -> db Id
 }
 
 func LoadJSON(jsonpath string) db.DbTopLevel {
@@ -69,11 +71,30 @@ func LoadJSON(jsonpath string) db.DbTopLevel {
 	dbdata.addRooms()
 	// RoomChoicesGroups: W365 has none of these – they must be generated
 	// from the PreferredRooms lists of courses.
+	dbdata.roomchoices = map[string]db.DbRef{}
 	dbdata.data.RoomChoiceGroups = []db.RoomChoiceGroup{}
 	// The RoomGroups from W365 are used by some courses. The listed rooms
 	// should build the Rooms list for the course.
+	dbdata.roomgroups = map[W365Ref][]db.DbRef{}
+	for _, d := range dbdata.w365.RoomGroups {
+		rlist := []db.DbRef{}
+		for _, r := range d.Rooms {
+			rr, ok := dbdata.rooms[r]
+			if !ok {
+				fmt.Printf("*ERROR* Unknown Room in RoomGroup %s:\n  %s\n",
+					d.Id, r)
+				continue
+			}
+			rlist = append(rlist, rr)
+		}
+		dbdata.roomgroups[d.Id] = rlist
+	}
 	dbdata.addGroups()
 	dbdata.addClasses()
+	dbdata.addCourses()
+	dbdata.addCourses()
+	dbdata.addSuperCourses()
+	dbdata.addSubCourses()
 
 	return dbdata.data
 }
@@ -91,6 +112,7 @@ func (dbdata *xData) addInfo() {
 }
 
 func (dbdata *xData) addDays() {
+	dbdata.data.Days = []db.Day{}
 	for _, d := range dbdata.w365.Days {
 		dbdata.data.Days = append(dbdata.data.Days, db.Day{
 			Id:   dbdata.nextId(),
@@ -101,6 +123,7 @@ func (dbdata *xData) addDays() {
 }
 
 func (dbdata *xData) addHours() {
+	dbdata.data.Hours = []db.Hour{}
 	mdbok := len(dbdata.data.Info.MiddayBreak) == 0
 	for i, d := range dbdata.w365.Hours {
 		if d.FirstAfternoonHour {
@@ -125,6 +148,7 @@ func (dbdata *xData) addHours() {
 }
 
 func (dbdata *xData) addTeachers() {
+	dbdata.data.Teachers = []db.Teacher{}
 	dbdata.teachers = map[W365Ref]db.DbRef{}
 	for _, d := range dbdata.w365.Teachers {
 		a := d.Absences
@@ -151,6 +175,7 @@ func (dbdata *xData) addTeachers() {
 }
 
 func (dbdata *xData) addSubjects() {
+	dbdata.data.Subjects = []db.Subject{}
 	dbdata.subjects = map[W365Ref]db.DbRef{}
 	dbdata.newsubjects = map[string]db.DbRef{}
 	dbdata.subjectmap = map[W365Ref]string{}
@@ -167,7 +192,9 @@ func (dbdata *xData) addSubjects() {
 }
 
 func (dbdata *xData) addRooms() {
+	dbdata.data.Rooms = []db.Room{}
 	dbdata.rooms = map[W365Ref]db.DbRef{}
+	dbdata.roomtag = map[db.DbRef]string{}
 	for _, d := range dbdata.w365.Rooms {
 		a := d.Absences
 		if len(d.Absences) == 0 {
@@ -181,10 +208,12 @@ func (dbdata *xData) addRooms() {
 			NotAvailable: a,
 		})
 		dbdata.rooms[d.Id] = rr
+		dbdata.roomtag[rr] = d.Shortcut
 	}
 }
 
 func (dbdata *xData) addGroups() {
+	dbdata.data.Groups = []db.Group{}
 	dbdata.groups = map[W365Ref]db.DbRef{}
 	dbdata.divgroups = map[db.DbRef]int{} //TODO: Key should be W365Ref?
 	// Every Group must be a member of a Class Division. Every Group gets an
@@ -203,6 +232,7 @@ func (dbdata *xData) addGroups() {
 }
 
 func (dbdata *xData) addClasses() {
+	dbdata.data.Classes = []db.Class{}
 	dbdata.classes = map[W365Ref]db.DbRef{}
 	for _, d := range dbdata.w365.Classes {
 		a := d.Absences
@@ -250,192 +280,199 @@ func (dbdata *xData) addClasses() {
 	}
 }
 
-func (dbdata *xData) addCourses() {
-	dbdata.courses = map[W365Ref]db.DbRef{}
-	for _, d := range dbdata.w365.Courses {
-		// Deal with subject
-		var sr db.DbRef = 0
-		var ok bool
-		msg := "*ERROR* Course %s:\n  Unknown Subject: %s\n"
-		if d.Subject == "" {
-			if len(d.Subjects) == 1 {
-				wsid := d.Subjects[0]
-				sr, ok = dbdata.subjects[wsid]
-				if !ok {
-					fmt.Printf(msg, d.Id, wsid)
-				}
-			} else if len(d.Subjects) > 1 {
-				// Make a subject name
-				sklist := []string{}
-				for _, wsid := range d.Subjects {
-					// Need Shortcut field
-					sk, ok := dbdata.subjectmap[wsid]
-					if ok {
-						sklist = append(sklist, sk)
-					} else {
-						fmt.Printf(msg, d.Id, wsid)
-					}
-				}
-				skname := strings.Join(sklist, ",")
-				sr, ok = dbdata.newsubjects[skname]
-				if !ok {
-					sk := fmt.Sprintf("X%02d", len(dbdata.newsubjects)+1)
-					sr = dbdata.nextId()
-					dbdata.data.Subjects = append(dbdata.data.Subjects,
-						db.Subject{
-							Id:   sr,
-							Tag:  sk,
-							Name: skname,
-						})
-					dbdata.newsubjects[skname] = sr
-				}
-			}
-		} else {
-			if len(d.Subjects) != 0 {
-				fmt.Printf("*ERROR* Course has both Subject AND Subjects: %s\n",
-					d.Id)
-			}
-			wsid := d.Subject
+func (dbdata *xData) readCourse(
+	id W365Ref,
+	subject W365Ref,
+	subjects []W365Ref,
+	groups []W365Ref,
+	teachers []W365Ref,
+	rooms []W365Ref,
+) (db.DbRef, []db.DbRef, []db.DbRef, []db.DbRef) {
+	// Deal with subject
+	var sr db.DbRef = 0
+	var ok bool
+	msg := "*ERROR* Course %s:\n  Unknown Subject: %s\n"
+	if subject == "" {
+		if len(subjects) == 1 {
+			wsid := subjects[0]
 			sr, ok = dbdata.subjects[wsid]
 			if !ok {
-				fmt.Printf(msg, d.Id, wsid)
+				fmt.Printf(msg, id, wsid)
 			}
-		}
-		// Deal with groups
-		//TODO: Only increment the counters if the course has lessons!
-		glist := []db.DbRef{}
-		for _, g := range d.Groups {
-			msg := fmt.Sprintf("*ERROR* Unknown group in Course %s:\n  %s",
-				d.Id, g)
-			gr, ok := dbdata.groups[g]
+		} else if len(subjects) > 1 {
+			// Make a subject name
+			sklist := []string{}
+			for _, wsid := range subjects {
+				// Need Shortcut field
+				sk, ok := dbdata.subjectmap[wsid]
+				if ok {
+					sklist = append(sklist, sk)
+				} else {
+					fmt.Printf(msg, id, wsid)
+				}
+			}
+			skname := strings.Join(sklist, ",")
+			sr, ok = dbdata.newsubjects[skname]
 			if !ok {
-				//TODO: Check for class!
-
-				fmt.Println(msg)
-				continue
+				sk := fmt.Sprintf("X%02d", len(dbdata.newsubjects)+1)
+				sr = dbdata.nextId()
+				dbdata.data.Subjects = append(dbdata.data.Subjects,
+					db.Subject{
+						Id:   sr,
+						Tag:  sk,
+						Name: skname,
+					})
+				dbdata.newsubjects[skname] = sr
 			}
-			//TODO
-			if _, ok := dbdata.divgroups[gid]; ok {
-				dbdata.divgroups[gid]++
-				//TODO: Could it be a group, but not in a division?
-				// If so, that would be ok, but the course shouldn't
-				// have any lessons!
-			} else if _, ok = dbdata.classes[gid]; ok {
-				dbdata.classes[gid]++
-			} else {
-				fmt.Printf("*ERROR* In Course %s,\n"+
-					"  -- Element is not a valid Group/Class: %s", d.Id, g)
-				continue
-			}
-			glist = append(glist, gid)
-
 		}
-		// Deal with teachers
-		tlist := []db.DbRef{}
-		/*
-			        for _, t := range d.Teachers {
-						// Check that it really is a teacher, add its tid
+	} else {
+		if len(subjects) != 0 {
+			fmt.Printf("*ERROR* Course has both Subject AND Subjects: %s\n", id)
+		}
+		wsid := subject
+		sr, ok = dbdata.subjects[wsid]
+		if !ok {
+			fmt.Printf(msg, id, wsid)
+		}
+	}
+	// Deal with groups
+	glist := []db.DbRef{}
+	for _, g := range groups {
+		gr, ok := dbdata.groups[g]
+		// gr can refer to a Group or a Class. If a Group is not within
+		// a Division, the course should have no lessons.
+		// TODO (later, when dealing with lessons): Check that!
+		if !ok {
+			// Check for class!
+			gr, ok = dbdata.classes[g]
+			if !ok {
+				fmt.Printf("*ERROR* Unknown group in Course %s:\n  %s\n", id, g)
+				continue
+			}
+		}
+		glist = append(glist, gr)
+	}
+	// Deal with teachers
+	tlist := []db.DbRef{}
+	for _, t := range teachers {
+		tr, ok := dbdata.teachers[t]
+		if !ok {
+			fmt.Printf("*ERROR* Unknown teacher in Course %s:\n  %s\n", id, t)
+			continue
+		}
+		tlist = append(tlist, tr)
+	}
+	// Deal with rooms. W365 can have a single RoomGroup or a list of Rooms
+	rclist := []db.DbRef{} // choice list
+	var rlist []db.DbRef   // actual room list
+	for _, r := range rooms {
+		rr, ok := dbdata.rooms[r]
+		if ok {
+			rclist = append(rclist, rr)
+		} else {
+			rl, ok := dbdata.roomgroups[r]
+			if ok {
+				rlist = rl
+				if len(rooms) != 1 {
+					rclist = []db.DbRef{}
+					fmt.Printf(
+						"*ERROR* Mixed Rooms and RoomGroups in Course %s\n", id)
+				}
+				break
+			} else {
+				fmt.Printf("*ERROR* Unknown room in Course %s:\n  %s\n", id, r)
+				continue
+			}
+		}
+	}
+	if len(rclist) == 1 {
+		// Make the Room compulsory.
+		rlist = rclist
+	} else if len(rclist) > 1 {
+		// Need a RoomChoiceGroup.
+		// Reuse these if the same list appears again, but treat the
+		// order as significant.
+		rslist := []string{}
+		for _, r := range rclist {
+			rslist = append(rslist, dbdata.roomtag[r])
+		}
+		rs := strings.Join(rslist, ",")
+		rr, ok := dbdata.roomchoices[rs]
+		if !ok {
+			rk := fmt.Sprintf("RC%03d", len(dbdata.roomchoices)+1)
+			rr = dbdata.nextId()
+			dbdata.data.RoomChoiceGroups = append(
+				dbdata.data.RoomChoiceGroups, db.RoomChoiceGroup{
+					Id:    rr,
+					Tag:   rk,
+					Name:  rs,
+					Rooms: rclist,
+				})
+			dbdata.roomchoices[rs] = rr
+		}
+		rlist = []db.DbRef{rr}
+	}
+	return sr, glist, tlist, rlist
+}
 
-					}
-		*/
+func (dbdata *xData) addCourses() {
+	dbdata.data.Courses = []db.Course{}
+	dbdata.courses = map[W365Ref]db.DbRef{}
+	for _, d := range dbdata.w365.Courses {
+		sr, glist, tlist, rlist := dbdata.readCourse(
+			d.Id, d.Subject, d.Subjects, d.Groups, d.Teachers, d.PreferredRooms)
+		cr := dbdata.nextId()
 		dbdata.data.Courses = append(dbdata.data.Courses, db.Course{
-			Id:       dbdata.nextId(),
+			Id:       cr,
 			Subject:  sr,
 			Groups:   glist,
 			Teachers: tlist,
-			//			Rooms: d.Rooms,
+			Rooms:    rlist,
 		})
-		dbdata.courses[d.Id] = sr
+		dbdata.courses[d.Id] = cr
 	}
 }
 
-//TODO: Can some of that be shared with SubCourses?
-
-// TODO: Deprecated?
-func DeMultipleSubjects(w365 *W365TopLevel) {
-	/* Subjects -> Subject conversion */
-	// First gather keys for all Subject nodes.
-	subject2key := map[W365Ref]string{}
-	for _, s := range w365.Subjects {
-		subject2key[s.IdStr()] = s.Shortcut
-	}
-	cache := map[string]W365Ref{}
-	// Now check all Courses and SubCourses for multiple subjects.
-	n := 0
-	for i, c := range w365.Courses {
-		if c.Subject == "" {
-			if len(c.Subjects) == 1 {
-				w365.Courses[i].Subject = c.Subjects[0]
-			} else if len(c.Subjects) > 1 {
-				// Make a subject name
-				sklist := []string{}
-				for _, sid := range c.Subjects {
-					sk, ok := subject2key[sid]
-					if ok {
-						sklist = append(sklist, sk)
-					} else {
-						fmt.Printf("*ERROR* Course %s:\n  Unknown Subject: %s\n",
-							c.IdStr(), sid)
-					}
-				}
-				skname := strings.Join(sklist, ",")
-				sid, ok := cache[skname]
-				if !ok {
-					n++
-					sk := fmt.Sprintf("X%02d", n)
-					sid = W365Ref(fmt.Sprintf("Id_%s", sk))
-					w365.Subjects = append(w365.Subjects, Subject{
-						Id:       sid,
-						Name:     skname,
-						Shortcut: sk,
-					})
-					cache[skname] = sid
-					subject2key[sid] = sk
-
-				}
-				w365.Courses[i].Subject = sid
-			} else if len(c.Subjects) != 0 {
-				fmt.Printf("*ERROR* Course has both Subject AND Subjects: %s\n",
-					c.IdStr())
-			}
+func (dbdata *xData) addSuperCourses() {
+	dbdata.data.SuperCourses = []db.SuperCourse{}
+	dbdata.supercourses = map[W365Ref]db.DbRef{}
+	for _, d := range dbdata.w365.SuperCourses {
+		cr := dbdata.nextId()
+		sr, ok := dbdata.subjects[d.Subject]
+		if !ok {
+			fmt.Printf("*ERROR* Unknown Subject in SuperCourse %s:\n  %s\n",
+				d.Id, d.Subject)
+			continue
 		}
+		dbdata.data.SuperCourses = append(dbdata.data.SuperCourses, db.SuperCourse{
+			Id:      cr,
+			Subject: sr,
+		})
+		dbdata.supercourses[d.Id] = cr
 	}
-	for i, c := range w365.SubCourses {
-		if c.Subject == "" {
-			if len(c.Subjects) == 1 {
-				w365.SubCourses[i].Subject = c.Subjects[0]
-			} else if len(c.Subjects) > 1 {
-				// Make a subject name
-				sklist := []string{}
-				for _, sid := range c.Subjects {
-					sk, ok := subject2key[sid]
-					if ok {
-						sklist = append(sklist, sk)
-					} else {
-						fmt.Printf("*ERROR* Course %s:\n  Unknown Subject: %s\n",
-							c.IdStr(), sid)
-					}
-				}
-				skname := strings.Join(sklist, ",")
-				sid, ok := cache[skname]
-				if !ok {
-					n++
-					sk := fmt.Sprintf("X%02d", n)
-					sid = W365Ref(fmt.Sprintf("Id_%s", sk))
-					w365.Subjects = append(w365.Subjects, Subject{
-						Id:       sid,
-						Name:     skname,
-						Shortcut: sk,
-					})
-					cache[skname] = sid
-					subject2key[sid] = sk
+}
 
-				}
-				w365.SubCourses[i].Subject = sid
-			} else if len(c.Subjects) != 0 {
-				fmt.Printf("*ERROR* Course has both Subject AND Subjects: %s\n",
-					c.IdStr())
-			}
+func (dbdata *xData) addSubCourses() {
+	dbdata.data.SubCourses = []db.SubCourse{}
+	dbdata.subcourses = map[W365Ref]db.DbRef{}
+	for _, d := range dbdata.w365.SubCourses {
+		sr, glist, tlist, rlist := dbdata.readCourse(
+			d.Id, d.Subject, d.Subjects, d.Groups, d.Teachers, d.PreferredRooms)
+		sc, ok := dbdata.supercourses[d.SuperCourse]
+		if !ok {
+			fmt.Printf("*ERROR* Unknown SuperCourse in SubCourse %s:\n  %s\n",
+				d.Id, d.SuperCourse)
+			continue
 		}
+		cr := dbdata.nextId()
+		dbdata.data.SubCourses = append(dbdata.data.SubCourses, db.SubCourse{
+			Id:          cr,
+			SuperCourse: sc,
+			Subject:     sr,
+			Groups:      glist,
+			Teachers:    tlist,
+			Rooms:       rlist,
+		})
+		dbdata.subcourses[d.Id] = cr
 	}
 }
