@@ -47,9 +47,9 @@ type xData struct {
 	roomtag      map[db.DbRef]string    // Room Tag (Shortcut)
 	roomchoices  map[string]db.DbRef    // New RoomChoiceGroup name -> db Id
 	roomgroups   map[W365Ref][]db.DbRef // list of Rooms
+	pregroups    map[W365Ref]string
 	groups       map[W365Ref]db.DbRef
 	classes      map[W365Ref]db.DbRef
-	divgroups    map[db.DbRef]int // count usage in courses
 	courses      map[W365Ref]db.DbRef
 	subcourses   map[W365Ref]db.DbRef
 	supercourses map[W365Ref]db.DbRef
@@ -95,7 +95,7 @@ func LoadJSON(jsonpath string) db.DbTopLevel {
 	dbdata.addCourses()
 	dbdata.addSuperCourses()
 	dbdata.addSubCourses()
-
+	dbdata.addLessons()
 	return dbdata.data
 }
 
@@ -213,21 +213,14 @@ func (dbdata *xData) addRooms() {
 }
 
 func (dbdata *xData) addGroups() {
+	// Every Group must be within one – and only one – Class Division.
+	// To handle that, the data for the Groups is gathered here, but the
+	// Elements are only added to the database when the Divisions are read.
 	dbdata.data.Groups = []db.Group{}
+	dbdata.pregroups = map[W365Ref]string{}
 	dbdata.groups = map[W365Ref]db.DbRef{}
-	dbdata.divgroups = map[db.DbRef]int{} //TODO: Key should be W365Ref?
-	// Every Group must be a member of a Class Division. Every Group gets an
-	// initial entry of -1 in divgroups, which is modified to 0 when it is
-	// found in a Division. Later, these are incremented when Lessons are
-	// found to be using them.
 	for _, d := range dbdata.w365.Groups {
-		gr := dbdata.nextId()
-		dbdata.data.Groups = append(dbdata.data.Groups, db.Group{
-			Id:  gr,
-			Tag: d.Shortcut,
-		})
-		dbdata.groups[d.Id] = gr
-		dbdata.divgroups[gr] = -1
+		dbdata.pregroups[d.Id] = d.Shortcut
 	}
 }
 
@@ -239,16 +232,25 @@ func (dbdata *xData) addClasses() {
 		if len(d.Absences) == 0 {
 			a = []db.TimeSlot{}
 		}
-		// Get the divisions and add their groups to divgroups, so that their
-		// use in courses can be counted – for checking and filtering.
+		// Get the divisions and add their groups to the database.
 		divs := []db.Division{}
 		for _, wdiv := range d.Divisions {
 			glist := []db.DbRef{}
 			for _, g := range wdiv.Groups {
-				gr, ok := dbdata.groups[g]
+				gtag, ok := dbdata.pregroups[g] // get Tag
 				if ok {
+					// Add Group to database
+					if _, nok := dbdata.groups[g]; nok {
+						fmt.Printf("*ERROR* Group Defined in"+
+							" multiple Divisions:\n  -- %s\n", g)
+					}
+					gr := dbdata.nextId()
+					dbdata.data.Groups = append(dbdata.data.Groups, db.Group{
+						Id:  gr,
+						Tag: gtag,
+					})
+					dbdata.groups[g] = gr
 					glist = append(glist, gr)
-					dbdata.divgroups[gr] = 0
 				} else {
 					fmt.Printf("*ERROR* Unknown Group in Class %s,"+
 						" Division %s:\n  %s\n", d.Shortcut, wdiv.Name, g)
@@ -339,11 +341,9 @@ func (dbdata *xData) readCourse(
 	glist := []db.DbRef{}
 	for _, g := range groups {
 		gr, ok := dbdata.groups[g]
-		// gr can refer to a Group or a Class. If a Group is not within
-		// a Division, the course should have no lessons.
-		// TODO (later, when dealing with lessons): Check that!
+		// gr can refer to a Group or a Class.
 		if !ok {
-			// Check for class!
+			// Check for class.
 			gr, ok = dbdata.classes[g]
 			if !ok {
 				fmt.Printf("*ERROR* Unknown group in Course %s:\n  %s\n", id, g)
@@ -474,5 +474,40 @@ func (dbdata *xData) addSubCourses() {
 			Rooms:       rlist,
 		})
 		dbdata.subcourses[d.Id] = cr
+	}
+}
+
+func (dbdata *xData) addLessons() {
+	dbdata.data.Lessons = []db.Lesson{}
+	for _, d := range dbdata.w365.Lessons {
+		// The course can be either a Course or a SubCourse.
+		crs, ok := dbdata.courses[d.Course]
+		if !ok {
+			crs, ok = dbdata.subcourses[d.Course]
+			if !ok {
+				fmt.Printf("*ERROR* Invalid course in Lesson %s:\n  -- %s\n",
+					d.Id, d.Course)
+				continue
+			}
+		}
+		rlist := []db.DbRef{}
+		for _, r := range d.LocalRooms {
+			rr, ok := dbdata.rooms[r]
+			if ok {
+				rlist = append(rlist, rr)
+			} else {
+				fmt.Printf("*ERROR* Invalid room in Lesson %s:\n  -- %s\n",
+					d.Id, r)
+			}
+		}
+		dbdata.data.Lessons = append(dbdata.data.Lessons, db.Lesson{
+			Id:       dbdata.nextId(),
+			Course:   crs,
+			Duration: d.Duration,
+			Day:      d.Day,
+			Hour:     d.Hour,
+			Fixed:    d.Fixed,
+			Rooms:    rlist,
+		})
 	}
 }
