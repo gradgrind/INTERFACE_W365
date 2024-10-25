@@ -226,9 +226,9 @@ func readTeachers(
 			MaxLessonsPerDay: n.MaxLessonsPerDay,
 			MaxDays:          n.MaxDays,
 			MaxGapsPerDay:    n.MaxGapsPerDay,
-			MaxGapsPerWeek:   -1,
-			MaxAfternoons:    n.MaxAfternoons,
-			LunchBreak:       true,
+			//MaxGapsPerWeek:   -1,
+			MaxAfternoons: n.MaxAfternoons,
+			LunchBreak:    true,
 		}
 		msg := fmt.Sprintf("Teacher %s in Absences", nid)
 		for _, ai := range w365tt.GetRefList(id2node, n.Absences, msg) {
@@ -296,11 +296,11 @@ func readClasses(
 			Shortcut:         fmt.Sprintf("%d%s", n.Level, n.Letter),
 			MinLessonsPerDay: n.MinLessonsPerDay,
 			MaxLessonsPerDay: n.MaxLessonsPerDay,
-			MaxGapsPerDay:    -1,
-			MaxAfternoons:    n.MaxAfternoons,
-			MaxGapsPerWeek:   -1,
-			LunchBreak:       true,
-			ForceFirstHour:   n.ForceFirstHour,
+			//MaxGapsPerDay:    -1,
+			MaxAfternoons: n.MaxAfternoons,
+			//MaxGapsPerWeek:   -1,
+			LunchBreak:     true,
+			ForceFirstHour: n.ForceFirstHour,
 		}
 		msg := fmt.Sprintf("Class %s in Absences", nid)
 		for _, ai := range w365tt.GetRefList(id2node, n.Absences, msg) {

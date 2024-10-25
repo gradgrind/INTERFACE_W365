@@ -73,12 +73,12 @@ type Teacher struct {
 	Shortcut         string
 	Firstname        string
 	Absences         []db.TimeSlot
-	MinLessonsPerDay interface{}
-	MaxLessonsPerDay interface{}
-	MaxDays          interface{}
-	MaxGapsPerDay    interface{}
-	MaxGapsPerWeek   interface{}
-	MaxAfternoons    interface{}
+	MinLessonsPerDay interface{} `json:",omitempty"`
+	MaxLessonsPerDay interface{} `json:",omitempty"`
+	MaxDays          interface{} `json:",omitempty"`
+	MaxGapsPerDay    interface{} `json:",omitempty"`
+	MaxGapsPerWeek   interface{} `json:",omitempty"`
+	MaxAfternoons    interface{} `json:",omitempty"`
 	LunchBreak       bool
 }
 
@@ -126,11 +126,11 @@ type Class struct {
 	Letter           string
 	Absences         []db.TimeSlot
 	Divisions        []Division
-	MinLessonsPerDay interface{}
-	MaxLessonsPerDay interface{}
-	MaxGapsPerDay    interface{}
-	MaxGapsPerWeek   interface{}
-	MaxAfternoons    interface{}
+	MinLessonsPerDay interface{} `json:",omitempty"`
+	MaxLessonsPerDay interface{} `json:",omitempty"`
+	MaxGapsPerDay    interface{} `json:",omitempty"`
+	MaxGapsPerWeek   interface{} `json:",omitempty"`
+	MaxAfternoons    interface{} `json:",omitempty"`
 	LunchBreak       bool
 	ForceFirstHour   bool
 }
@@ -159,8 +159,8 @@ type Division struct {
 
 type Course struct {
 	Id             W365Ref
-	Subjects       []W365Ref // if present, will be converted to Subject
-	Subject        W365Ref
+	Subjects       []W365Ref `json:",omitempty"`
+	Subject        W365Ref   `json:",omitempty"`
 	Groups         []W365Ref
 	Teachers       []W365Ref
 	PreferredRooms []W365Ref
@@ -182,8 +182,8 @@ func (n *SuperCourse) IdStr() W365Ref {
 type SubCourse struct {
 	Id             W365Ref
 	SuperCourse    W365Ref
-	Subjects       []W365Ref // if present, will be converted to Subject
-	Subject        W365Ref
+	Subjects       []W365Ref `json:",omitempty"`
+	Subject        W365Ref   `json:",omitempty"`
 	Groups         []W365Ref
 	Teachers       []W365Ref
 	PreferredRooms []W365Ref
