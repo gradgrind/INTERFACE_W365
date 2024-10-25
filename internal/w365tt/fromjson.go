@@ -138,9 +138,13 @@ func (dbdata *xData) addHours() {
 				fmt.Printf("*ERROR* MiddayBreak set in Info AND Hours\n")
 			}
 		}
+		tag := d.Shortcut
+		if tag == "" {
+			tag = fmt.Sprintf("(%d)", i+1)
+		}
 		dbdata.data.Hours = append(dbdata.data.Hours, db.Hour{
 			Id:    dbdata.nextId(),
-			Tag:   d.Shortcut,
+			Tag:   tag,
 			Name:  d.Name,
 			Start: d.Start,
 			End:   d.End,

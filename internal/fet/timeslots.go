@@ -3,12 +3,12 @@ package fet
 import (
 	"encoding/xml"
 	"fmt"
-	"gradgrind/wztogo/internal/wzbase"
 )
 
 type fetDay struct {
-	XMLName xml.Name `xml:"Day"`
-	Name    string
+	XMLName   xml.Name `xml:"Day"`
+	Name      string
+	Long_Name string
 }
 
 type fetDaysList struct {
@@ -32,10 +32,9 @@ type fetHoursList struct {
 func getDays(fetinfo *fetInfo) {
 	days := []fetDay{}
 	dlist := []string{}
-	for _, ti := range fetinfo.wzdb.TableMap["DAYS"] {
-		d := fetinfo.ref2fet[ti]
-		days = append(days, fetDay{Name: d})
-		dlist = append(dlist, d)
+	for _, n := range fetinfo.db.Days {
+		days = append(days, fetDay{Name: n.Tag, Long_Name: n.Name})
+		dlist = append(dlist, n.Tag)
 	}
 	fetinfo.days = dlist
 	fetinfo.fetdata.Days_List = fetDaysList{
@@ -47,15 +46,12 @@ func getDays(fetinfo *fetInfo) {
 func getHours(fetinfo *fetInfo) {
 	hours := []fetHour{}
 	hlist := []string{}
-	for _, ti := range fetinfo.wzdb.TableMap["HOURS"] {
-		h := fetinfo.ref2fet[ti]
-		hn := fetinfo.wzdb.GetNode(ti).(wzbase.Hour)
+	for _, n := range fetinfo.db.Hours {
 		hours = append(hours, fetHour{
-			Name: hn.ID,
-			Long_Name: fmt.Sprintf("%s@%s-%s",
-				hn.NAME, hn.START_TIME, hn.END_TIME),
+			Name:      n.Tag,
+			Long_Name: fmt.Sprintf("%s@%s-%s", n.Name, n.Start, n.End),
 		})
-		hlist = append(hlist, h)
+		hlist = append(hlist, n.Tag)
 	}
 	fetinfo.hours = hlist
 	fetinfo.fetdata.Hours_List = fetHoursList{

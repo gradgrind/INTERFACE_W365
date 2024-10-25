@@ -28,9 +28,9 @@ type fet struct {
 	Mode             string
 	Institution_Name string
 	Comments         string // this can be a source reference
+	Days_List        fetDaysList
+	Hours_List       fetHoursList
 	/*
-		Days_List        fetDaysList
-		Hours_List       fetHoursList
 		Teachers_List    fetTeachersList
 		Subjects_List    fetSubjectsList
 		Rooms_List       fetRoomsList
@@ -145,9 +145,9 @@ func make_fet_file(dbdata *db.DbTopLevel,
 		},
 	}
 
+	getDays(&fetinfo)
+	getHours(&fetinfo)
 	/*
-		getDays(&fetinfo)
-		getHours(&fetinfo)
 		getTeachers(&fetinfo)
 		getSubjects(&fetinfo)
 		getRooms(&fetinfo)
