@@ -30,10 +30,10 @@ type fet struct {
 	Comments         string // this can be a source reference
 	Days_List        fetDaysList
 	Hours_List       fetHoursList
+	Teachers_List    fetTeachersList
+	Subjects_List    fetSubjectsList
+	Rooms_List       fetRoomsList
 	/*
-		Teachers_List    fetTeachersList
-		Subjects_List    fetSubjectsList
-		Rooms_List       fetRoomsList
 		Students_List    fetStudentsList
 		//Buildings_List
 		Activity_Tags_List     fetActivityTags
@@ -57,9 +57,9 @@ type timeConstraints struct {
 	XMLName xml.Name `xml:"Time_Constraints_List"`
 	//
 	ConstraintBasicCompulsoryTime basicTimeConstraint
+	//	ConstraintStudentsSetNotAvailableTimes []studentsNotAvailable
+	ConstraintTeacherNotAvailableTimes []teacherNotAvailable
 	/*
-		ConstraintStudentsSetNotAvailableTimes       []studentsNotAvailable
-		ConstraintTeacherNotAvailableTimes           []teacherNotAvailable
 		ConstraintActivityPreferredStartingTime      []startingTime
 		ConstraintMinDaysBetweenActivities           []minDaysBetweenActivities
 		ConstraintStudentsSetMaxHoursDailyInInterval []lunchBreak
@@ -147,10 +147,10 @@ func make_fet_file(dbdata *db.DbTopLevel,
 
 	getDays(&fetinfo)
 	getHours(&fetinfo)
+	getTeachers(&fetinfo)
+	getSubjects(&fetinfo)
+	getRooms(&fetinfo)
 	/*
-		getTeachers(&fetinfo)
-		getSubjects(&fetinfo)
-		getRooms(&fetinfo)
 		getClasses(&fetinfo)
 		getActivities(&fetinfo, activities, course2activities)
 		gap_subject_activities(&fetinfo, subject_activities)

@@ -2,7 +2,6 @@ package fet
 
 import (
 	"encoding/xml"
-	"gradgrind/wztogo/internal/wzbase"
 )
 
 // TODO: At present this is used for adding activity-tags to activities
@@ -22,13 +21,11 @@ type fetSubjectsList struct {
 }
 
 func getSubjects(fetinfo *fetInfo) {
-	trefs := fetinfo.wzdb.TableMap["SUBJECTS"]
 	items := []fetSubject{}
-	for _, ti := range trefs {
-		n := fetinfo.wzdb.GetNode(ti).(wzbase.Subject)
+	for _, n := range fetinfo.db.Subjects {
 		items = append(items, fetSubject{
-			Name:      n.ID,
-			Long_Name: n.NAME,
+			Name:      n.Tag,
+			Long_Name: n.Name,
 		})
 	}
 	fetinfo.fetdata.Subjects_List = fetSubjectsList{

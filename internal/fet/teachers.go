@@ -3,7 +3,6 @@ package fet
 import (
 	"encoding/xml"
 	"fmt"
-	"gradgrind/wztogo/internal/wzbase"
 )
 
 type fetTeacher struct {
@@ -18,6 +17,12 @@ type fetTeachersList struct {
 	Teacher []fetTeacher
 }
 
+type notAvailableTime struct {
+	XMLName xml.Name `xml:"Not_Available_Time"`
+	Day     string
+	Hour    string
+}
+
 type teacherNotAvailable struct {
 	XMLName                       xml.Name `xml:"ConstraintTeacherNotAvailableTimes"`
 	Weight_Percentage             int
@@ -28,16 +33,14 @@ type teacherNotAvailable struct {
 }
 
 func getTeachers(fetinfo *fetInfo) {
-	trefs := fetinfo.wzdb.TableMap["TEACHERS"]
 	items := []fetTeacher{}
 	natimes := []teacherNotAvailable{}
-	for _, ti := range trefs {
-		n := fetinfo.wzdb.GetNode(ti).(wzbase.Teacher)
+	for _, n := range fetinfo.db.Teachers {
 		items = append(items, fetTeacher{
-			Name: n.ID,
+			Name: n.Tag,
 			Long_Name: fmt.Sprintf("%s %s",
-				n.FIRSTNAMES,
-				n.LASTNAME,
+				n.Firstname,
+				n.Name,
 			),
 			//<Target_Number_of_Hours>0</Target_Number_of_Hours>
 			//<Qualified_Subjects></Qualified_Subjects>
@@ -45,27 +48,28 @@ func getTeachers(fetinfo *fetInfo) {
 
 		// "Not available" times
 		nats := []notAvailableTime{}
-		for d, dna := range n.NOT_AVAILABLE {
-			for _, h := range dna {
-				nats = append(nats,
-					notAvailableTime{
-						Day: fetinfo.days[d], Hour: fetinfo.hours[h]})
-			}
+		for _, dh := range n.NotAvailable {
+			nats = append(nats,
+				notAvailableTime{
+					Day:  fetinfo.days[dh.Day],
+					Hour: fetinfo.hours[dh.Hour]})
 		}
+
 		if len(nats) > 0 {
 			natimes = append(natimes,
 				teacherNotAvailable{
 					Weight_Percentage:             100,
-					Teacher:                       n.ID,
+					Teacher:                       n.Tag,
 					Number_of_Not_Available_Times: len(nats),
 					Not_Available_Time:            nats,
 					Active:                        true,
 				})
 		}
-
 	}
+
 	fetinfo.fetdata.Teachers_List = fetTeachersList{
 		Teacher: items,
 	}
-	fetinfo.fetdata.Time_Constraints_List.ConstraintTeacherNotAvailableTimes = natimes
+	fetinfo.fetdata.Time_Constraints_List.
+		ConstraintTeacherNotAvailableTimes = natimes
 }
