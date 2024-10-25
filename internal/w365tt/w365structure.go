@@ -39,6 +39,7 @@ type TTNode interface {
 }
 
 type Info struct {
+	SchoolName         string
 	FirstAfternoonHour int
 	MiddayBreak        []int
 }
