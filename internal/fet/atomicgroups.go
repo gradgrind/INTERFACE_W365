@@ -43,6 +43,8 @@ func makeAtomicGroups(fetinfo *fetInfo) {
 	}
 	// Go through the classes inspecting their Divisions.
 	for _, cl := range fetinfo.db.Classes {
+		ags := []string{}
+
 		divs := [][]db.DbRef{}
 		for _, d := range cl.Divisions {
 			dok := false
@@ -53,9 +55,21 @@ func makeAtomicGroups(fetinfo *fetInfo) {
 				}
 			}
 			if dok {
+				if len(ags) == 0 {
+					ags = []string{cl.Tag}
+				}
 				divs = append(divs, d.Groups)
+				agsx := []string{}
+				for _, ag := range ags {
+					for _, g := range d.Groups {
+						agsx = append(agsx, ag+
+							"~"+fetinfo.ref2grouponly[g])
+					}
+				}
+				ags = agsx
 			}
 		}
 		fmt.Printf("  §§§ Divisions in %s: %+v\n", cl.Tag, divs)
+		fmt.Printf("     --> %+v\n", ags)
 	}
 }
