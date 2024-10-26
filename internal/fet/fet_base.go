@@ -2,10 +2,10 @@
 package fet
 
 import (
+	"encoding/json"
 	"encoding/xml"
 	"fmt"
 	"gradgrind/INTERFACE_W365/internal/db"
-	"gradgrind/INTERFACE_W365/internal/w365tt"
 	"log"
 	"strings"
 )
@@ -134,7 +134,7 @@ func make_fet_file(dbdata *db.DbTopLevel,
 			Version:          fet_version,
 			Mode:             "Official",
 			Institution_Name: dbdata.Info.Institution,
-			Comments:         string(dbdata.Reference.(w365tt.W365Ref)),
+			Comments:         getString(dbdata.Info.Reference),
 			Time_Constraints_List: timeConstraints{
 				ConstraintBasicCompulsoryTime: basicTimeConstraint{
 					Weight_Percentage: 100, Active: true},
@@ -158,4 +158,22 @@ func make_fet_file(dbdata *db.DbTopLevel,
 	*/
 
 	return xml.Header + makeXML(fetinfo.fetdata, 0)
+}
+
+func get_string(val interface{}) string {
+	s, ok := val.(string)
+	if !ok {
+		b, _ := json.Marshal(val)
+		s = string(b)
+	}
+	return strings.Trim(s, "\"")
+}
+
+func getString(val interface{}) string {
+	s, ok := val.(string)
+	if !ok {
+		b, _ := json.Marshal(val)
+		s = string(b)
+	}
+	return s
 }

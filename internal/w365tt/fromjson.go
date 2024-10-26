@@ -92,7 +92,7 @@ func (dbdata *xData) nextId() db.DbRef {
 func (dbdata *xData) addInfo() {
 	dbdata.data.Info = db.Info{
 		Institution:        dbdata.w365.W365TT.SchoolName,
-		Reference:          dbdata.w365.W365TT.Scenario,
+		Reference:          string(dbdata.w365.W365TT.Scenario),
 		FirstAfternoonHour: dbdata.w365.W365TT.FirstAfternoonHour,
 		MiddayBreak:        dbdata.w365.W365TT.MiddayBreak,
 	}
@@ -105,7 +105,7 @@ func (dbdata *xData) addDays() {
 			Id:        dbdata.nextId(),
 			Tag:       d.Shortcut,
 			Name:      d.Name,
-			Reference: d.Id,
+			Reference: string(d.Id),
 		})
 	}
 }
@@ -135,7 +135,7 @@ func (dbdata *xData) addHours() {
 			Name:      d.Name,
 			Start:     d.Start,
 			End:       d.End,
-			Reference: d.Id,
+			Reference: string(d.Id),
 		})
 	}
 }
@@ -162,7 +162,7 @@ func (dbdata *xData) addTeachers() {
 			MaxGapsPerWeek:   defaultMinus1(d.MaxGapsPerWeek),
 			MaxAfternoons:    defaultMinus1(d.MaxAfternoons),
 			LunchBreak:       d.LunchBreak,
-			Reference:        d.Id,
+			Reference:        string(d.Id),
 		})
 		dbdata.teachers[d.Id] = tr
 	}
@@ -179,7 +179,7 @@ func (dbdata *xData) addSubjects() {
 			Id:        sr,
 			Tag:       d.Shortcut,
 			Name:      d.Name,
-			Reference: d.Id,
+			Reference: string(d.Id),
 		})
 		dbdata.subjects[d.Id] = sr
 		dbdata.subjectmap[d.Id] = d.Shortcut
@@ -201,7 +201,7 @@ func (dbdata *xData) addRooms() {
 			Tag:          d.Shortcut,
 			Name:         d.Name,
 			NotAvailable: a,
-			Reference:    d.Id,
+			Reference:    string(d.Id),
 		})
 		dbdata.rooms[d.Id] = rr
 		dbdata.roomtag[rr] = d.Shortcut
@@ -227,7 +227,7 @@ func (dbdata *xData) addRoomGroups() {
 			Id:        rr,
 			Tag:       d.Shortcut,
 			Name:      d.Name,
-			Reference: d.Id,
+			Reference: string(d.Id),
 			Rooms:     rlist,
 		})
 		dbdata.roomgroups[d.Id] = rr
@@ -270,7 +270,7 @@ func (dbdata *xData) addClasses() {
 					dbdata.data.Groups = append(dbdata.data.Groups, db.Group{
 						Id:        gr,
 						Tag:       gtag,
-						Reference: g,
+						Reference: string(g),
 					})
 					dbdata.groups[g] = gr
 					glist = append(glist, gr)
@@ -282,7 +282,7 @@ func (dbdata *xData) addClasses() {
 			divs = append(divs, db.Division{
 				Name:      wdiv.Name,
 				Groups:    glist,
-				Reference: wdiv.Id,
+				Reference: string(wdiv.Id),
 			})
 		}
 		cr := dbdata.nextId()
@@ -301,7 +301,7 @@ func (dbdata *xData) addClasses() {
 			MaxAfternoons:    defaultMinus1(d.MaxAfternoons),
 			LunchBreak:       d.LunchBreak,
 			ForceFirstHour:   d.ForceFirstHour,
-			Reference:        d.Id,
+			Reference:        string(d.Id),
 		})
 		dbdata.classes[d.Id] = cr
 	}
@@ -451,7 +451,7 @@ func (dbdata *xData) addCourses() {
 			Groups:    glist,
 			Teachers:  tlist,
 			Room:      rm,
-			Reference: d.Id,
+			Reference: string(d.Id),
 		})
 		dbdata.courses[d.Id] = cr
 	}
@@ -471,7 +471,7 @@ func (dbdata *xData) addSuperCourses() {
 		dbdata.data.SuperCourses = append(dbdata.data.SuperCourses, db.SuperCourse{
 			Id:        cr,
 			Subject:   sr,
-			Reference: d.Id,
+			Reference: string(d.Id),
 		})
 		dbdata.supercourses[d.Id] = cr
 	}
@@ -497,7 +497,7 @@ func (dbdata *xData) addSubCourses() {
 			Groups:      glist,
 			Teachers:    tlist,
 			Room:        rm,
-			Reference:   d.Id,
+			Reference:   string(d.Id),
 		})
 		dbdata.subcourses[d.Id] = cr
 	}
@@ -534,7 +534,7 @@ func (dbdata *xData) addLessons() {
 			Hour:      d.Hour,
 			Fixed:     d.Fixed,
 			Rooms:     rlist,
-			Reference: d.Id,
+			Reference: string(d.Id),
 		})
 	}
 }

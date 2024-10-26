@@ -52,7 +52,7 @@ func getRooms(fetinfo *fetInfo) {
 			Long_Name: n.Name,
 			Capacity:  30000,
 			Virtual:   false,
-			Comments:  "TODO: A source reference",
+			Comments:  getString(n.Reference),
 		},
 		)
 	}
