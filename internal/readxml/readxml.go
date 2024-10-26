@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"encoding/xml"
 	"fmt"
+	"gradgrind/INTERFACE_W365/internal/db"
 	"gradgrind/INTERFACE_W365/internal/w365tt"
 	"io"
 	"log"
@@ -57,9 +58,6 @@ func ConvertToJSON(f365xml string) string {
 	readLessons(&outdata, id2node, indata.Lessons)
 	// Currently no SuperCourses, SubCourses or Constraints
 
-	//	w365tt.Multisubjects(&outdata)
-	//	w365tt.StripDivisions(&outdata)
-
 	// Save as JSON
 	f := strings.TrimSuffix(indata.Path, filepath.Ext(indata.Path)) + ".json"
 	j, err := json.MarshalIndent(outdata, "", "  ")
@@ -95,7 +93,6 @@ func readDays(
 		}
 		outdata.Days = append(outdata.Days, w365tt.Day{
 			Id:       nid,
-			Type:     w365tt.TypeDAY,
 			Name:     n.Name,
 			Shortcut: n.Shortcut,
 		})
@@ -114,7 +111,6 @@ func readHours(
 		}
 		r := w365tt.Hour{
 			Id:       nid,
-			Type:     w365tt.TypeHOUR,
 			Name:     n.Name,
 			Shortcut: n.Shortcut,
 		}
@@ -165,7 +161,6 @@ func readSubjects(
 		}
 		outdata.Subjects = append(outdata.Subjects, w365tt.Subject{
 			Id:       nid,
-			Type:     w365tt.TypeSUBJECT,
 			Name:     n.Name,
 			Shortcut: n.Shortcut,
 		})
@@ -187,14 +182,13 @@ func readRooms(
 		if len(rg) == 0 {
 			r := w365tt.Room{
 				Id:       nid,
-				Type:     w365tt.TypeROOM,
 				Name:     n.Name,
 				Shortcut: n.Shortcut,
 			}
 			msg = fmt.Sprintf("Room %s in Absences", nid)
 			for _, ai := range w365tt.GetRefList(id2node, n.Absences, msg) {
 				an := id2node[ai]
-				r.Absences = append(r.Absences, w365tt.Absence{
+				r.Absences = append(r.Absences, db.TimeSlot{
 					Day:  an.(Absence).Day,
 					Hour: an.(Absence).Hour,
 				})
@@ -204,7 +198,6 @@ func readRooms(
 		} else {
 			r := w365tt.RoomGroup{
 				Id:   nid,
-				Type: w365tt.TypeROOMGROUP,
 				Name: n.Shortcut, // !
 				//Shortcut: n.Shortcut,
 				Rooms: rg,
@@ -226,7 +219,6 @@ func readTeachers(
 		}
 		r := w365tt.Teacher{
 			Id:               nid,
-			Type:             w365tt.TypeTEACHER,
 			Name:             n.Name,
 			Shortcut:         n.Shortcut,
 			Firstname:        n.Firstname,
@@ -234,14 +226,14 @@ func readTeachers(
 			MaxLessonsPerDay: n.MaxLessonsPerDay,
 			MaxDays:          n.MaxDays,
 			MaxGapsPerDay:    n.MaxGapsPerDay,
-			MaxGapsPerWeek:   -1,
-			MaxAfternoons:    n.MaxAfternoons,
-			LunchBreak:       true,
+			//MaxGapsPerWeek:   -1,
+			MaxAfternoons: n.MaxAfternoons,
+			LunchBreak:    true,
 		}
 		msg := fmt.Sprintf("Teacher %s in Absences", nid)
 		for _, ai := range w365tt.GetRefList(id2node, n.Absences, msg) {
 			an := id2node[ai]
-			r.Absences = append(r.Absences, w365tt.Absence{
+			r.Absences = append(r.Absences, db.TimeSlot{
 				Day:  an.(Absence).Day,
 				Hour: an.(Absence).Hour,
 			})
@@ -251,8 +243,8 @@ func readTeachers(
 	}
 }
 
-func sortAbsences(alist []w365tt.Absence) {
-	slices.SortFunc(alist, func(a, b w365tt.Absence) int {
+func sortAbsences(alist []db.TimeSlot) {
+	slices.SortFunc(alist, func(a, b db.TimeSlot) int {
 		if a.Day < b.Day {
 			return -1
 		}
@@ -281,7 +273,6 @@ func readGroups(
 		}
 		outdata.Groups = append(outdata.Groups, w365tt.Group{
 			Id:       nid,
-			Type:     w365tt.TypeGROUP,
 			Shortcut: n.Shortcut,
 		})
 	}
@@ -299,23 +290,22 @@ func readClasses(
 		}
 		r := w365tt.Class{
 			Id:               nid,
-			Type:             w365tt.TypeCLASS,
 			Name:             n.Name,
 			Level:            n.Level,
 			Letter:           n.Letter,
 			Shortcut:         fmt.Sprintf("%d%s", n.Level, n.Letter),
 			MinLessonsPerDay: n.MinLessonsPerDay,
 			MaxLessonsPerDay: n.MaxLessonsPerDay,
-			MaxGapsPerDay:    -1,
-			MaxAfternoons:    n.MaxAfternoons,
-			MaxGapsPerWeek:   -1,
-			LunchBreak:       true,
-			ForceFirstHour:   n.ForceFirstHour,
+			//MaxGapsPerDay:    -1,
+			MaxAfternoons: n.MaxAfternoons,
+			//MaxGapsPerWeek:   -1,
+			LunchBreak:     true,
+			ForceFirstHour: n.ForceFirstHour,
 		}
 		msg := fmt.Sprintf("Class %s in Absences", nid)
 		for _, ai := range w365tt.GetRefList(id2node, n.Absences, msg) {
 			an := id2node[ai]
-			r.Absences = append(r.Absences, w365tt.Absence{
+			r.Absences = append(r.Absences, db.TimeSlot{
 				Day:  an.(Absence).Day,
 				Hour: an.(Absence).Hour,
 			})
@@ -363,7 +353,6 @@ func readCourses(
 		rms := w365tt.GetRefList(id2node, n.PreferredRooms, msg)
 		outdata.Courses = append(outdata.Courses, w365tt.Course{
 			Id:             nid,
-			Type:           w365tt.TypeCOURSE,
 			Subjects:       sbjs,
 			Groups:         grps,
 			Teachers:       tchs,
@@ -393,7 +382,6 @@ func readEpochPlanCourses(
 		rms := w365tt.GetRefList(id2node, n.PreferredRooms, msg)
 		outdata.Courses = append(outdata.Courses, w365tt.Course{
 			Id:             nid,
-			Type:           w365tt.TypeCOURSE,
 			Subjects:       sbjs,
 			Groups:         grps,
 			Teachers:       tchs,
@@ -424,7 +412,6 @@ func readLessons(
 		msg := fmt.Sprintf("Course %s in LocalRooms", nid)
 		outdata.Lessons = append(outdata.Lessons, w365tt.Lesson{
 			Id:         nid,
-			Type:       w365tt.TypeLESSON,
 			Course:     n.Course,
 			Duration:   dur,
 			Day:        n.Day,

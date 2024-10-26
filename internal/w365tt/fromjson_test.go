@@ -29,6 +29,25 @@ func getJSONfile() string {
 	return f365
 }
 
+func TestToDb(t *testing.T) {
+	fjson := getJSONfile()
+	fmt.Printf("\n ***** Reading %s *****\n", fjson)
+	data := LoadJSON(fjson)
+
+	//fmt.Printf("JSON struct: %#v\n", data)
+
+	// Save as JSON
+	f := strings.TrimSuffix(fjson, filepath.Ext(fjson)) + "_db.json"
+	j, err := json.MarshalIndent(data, "", "  ")
+	if err != nil {
+		log.Fatal(err)
+	}
+	if err := os.WriteFile(f, j, 0666); err != nil {
+		log.Fatal(err)
+	}
+	fmt.Printf("\n ***** JSON written to %s *****\n", f)
+}
+
 func TestFromJSON(t *testing.T) {
 	fjson := getJSONfile()
 	fmt.Printf("\n ***** Reading %s *****\n", fjson)

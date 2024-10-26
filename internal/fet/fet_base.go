@@ -4,12 +4,12 @@ package fet
 import (
 	"encoding/xml"
 	"fmt"
-	"gradgrind/wztogo/internal/wzbase"
+	"gradgrind/INTERFACE_W365/internal/db"
 	"log"
 	"strings"
 )
 
-const fet_version = "6.18.0"
+const fet_version = "6.25.2"
 
 // Function makeXML produces a chunk of pretty-printed XML output from
 // the input data.
@@ -33,17 +33,20 @@ type fet struct {
 	Teachers_List    fetTeachersList
 	Subjects_List    fetSubjectsList
 	Rooms_List       fetRoomsList
-	Students_List    fetStudentsList
-	//Buildings_List
-	Activity_Tags_List     fetActivityTags
-	Activities_List        fetActivitiesList
+	/*
+		Students_List    fetStudentsList
+		//Buildings_List
+		Activity_Tags_List     fetActivityTags
+		Activities_List        fetActivitiesList
+	*/
 	Time_Constraints_List  timeConstraints
 	Space_Constraints_List spaceConstraints
 }
 
 type fetInfo struct {
-	wzdb             *wzbase.WZdata
-	ref2fet          map[int]string
+	db               *db.DbTopLevel
+	ref2fet          map[db.DbRef]string
+	ref2grouponly    map[db.DbRef]string
 	days             []string
 	hours            []string
 	fetdata          fet
@@ -53,14 +56,16 @@ type fetInfo struct {
 type timeConstraints struct {
 	XMLName xml.Name `xml:"Time_Constraints_List"`
 	//
-	ConstraintBasicCompulsoryTime                basicTimeConstraint
-	ConstraintStudentsSetNotAvailableTimes       []studentsNotAvailable
-	ConstraintTeacherNotAvailableTimes           []teacherNotAvailable
-	ConstraintActivityPreferredStartingTime      []startingTime
-	ConstraintMinDaysBetweenActivities           []minDaysBetweenActivities
-	ConstraintStudentsSetMaxHoursDailyInInterval []lunchBreak
-	ConstraintStudentsSetMaxGapsPerWeek          []maxGapsPerWeek
-	ConstraintStudentsSetMinHoursDaily           []minLessonsPerDay
+	ConstraintBasicCompulsoryTime basicTimeConstraint
+	//	ConstraintStudentsSetNotAvailableTimes []studentsNotAvailable
+	ConstraintTeacherNotAvailableTimes []teacherNotAvailable
+	/*
+		ConstraintActivityPreferredStartingTime      []startingTime
+		ConstraintMinDaysBetweenActivities           []minDaysBetweenActivities
+		ConstraintStudentsSetMaxHoursDailyInInterval []lunchBreak
+		ConstraintStudentsSetMaxGapsPerWeek          []maxGapsPerWeek
+		ConstraintStudentsSetMinHoursDaily           []minLessonsPerDay
+	*/
 }
 
 type basicTimeConstraint struct {
@@ -70,10 +75,12 @@ type basicTimeConstraint struct {
 }
 
 type spaceConstraints struct {
-	XMLName                          xml.Name `xml:"Space_Constraints_List"`
-	ConstraintBasicCompulsorySpace   basicSpaceConstraint
-	ConstraintActivityPreferredRoom  []fixedRoom
-	ConstraintActivityPreferredRooms []roomChoice
+	XMLName                        xml.Name `xml:"Space_Constraints_List"`
+	ConstraintBasicCompulsorySpace basicSpaceConstraint
+	/*
+	   ConstraintActivityPreferredRoom  []fixedRoom
+	   ConstraintActivityPreferredRooms []roomChoice
+	*/
 }
 
 type basicSpaceConstraint struct {
@@ -82,25 +89,51 @@ type basicSpaceConstraint struct {
 	Active            bool
 }
 
-func make_fet_file(wzdb *wzbase.WZdata,
-	activities []wzbase.Activity,
-	course2activities map[int][]int,
-	subject_activities []wzbase.SubjectGroupActivities,
+func make_fet_file(dbdata *db.DbTopLevel,
+
+// activities []wzbase.Activity,
+// course2activities map[int][]int,
+// subject_activities []wzbase.SubjectGroupActivities,
 ) string {
 	//TODO--
-	fmt.Printf("\n????? %+v\n", wzdb.Schooldata)
+	fmt.Printf("\n????? %+v\n", dbdata.Info)
 
 	// Build ref-index -> fet-key mapping
-	ref2fet := wzdb.Ref2IdMap()
+	ref2fet := map[db.DbRef]string{}
+	for _, r := range dbdata.Subjects {
+		ref2fet[r.Id] = r.Tag
+	}
+	for _, r := range dbdata.Rooms {
+		ref2fet[r.Id] = r.Tag
+	}
+	for _, r := range dbdata.Teachers {
+		ref2fet[r.Id] = r.Tag
+	}
+	ref2grouponly := map[db.DbRef]string{}
+	for _, r := range dbdata.Groups {
+		ref2grouponly[r.Id] = r.Tag
+	}
+	for _, r := range dbdata.Classes {
+		ref2fet[r.Id] = r.Tag
+		// Handle the groups
+		for _, d := range r.Divisions {
+			for _, g := range d.Groups {
+				ref2fet[g] = fmt.Sprintf("%s.%s", r.Tag, ref2grouponly[g])
+			}
+		}
+	}
+
+	fmt.Printf("ref2fet: %v\n", ref2fet)
 
 	fetinfo := fetInfo{
-		wzdb:    wzdb,
-		ref2fet: ref2fet,
+		db:            dbdata,
+		ref2fet:       ref2fet,
+		ref2grouponly: ref2grouponly,
 		fetdata: fet{
 			Version:          fet_version,
 			Mode:             "Official",
-			Institution_Name: wzdb.Schooldata["SchoolName"].(string),
-			Comments:         wzdb.Schooldata["SourceReference"].(string),
+			Institution_Name: dbdata.Info.Institution,
+			Comments:         "Put a Source Reference here?",
 			Time_Constraints_List: timeConstraints{
 				ConstraintBasicCompulsoryTime: basicTimeConstraint{
 					Weight_Percentage: 100, Active: true},
@@ -117,9 +150,11 @@ func make_fet_file(wzdb *wzbase.WZdata,
 	getTeachers(&fetinfo)
 	getSubjects(&fetinfo)
 	getRooms(&fetinfo)
-	getClasses(&fetinfo)
-	getActivities(&fetinfo, activities, course2activities)
-	gap_subject_activities(&fetinfo, subject_activities)
+	/*
+		getClasses(&fetinfo)
+		getActivities(&fetinfo, activities, course2activities)
+		gap_subject_activities(&fetinfo, subject_activities)
+	*/
 
 	return xml.Header + makeXML(fetinfo.fetdata, 0)
 }

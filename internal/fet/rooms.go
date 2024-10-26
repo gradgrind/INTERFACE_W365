@@ -2,12 +2,6 @@ package fet
 
 import (
 	"encoding/xml"
-	"fmt"
-	"gradgrind/wztogo/internal/wzbase"
-	"log"
-	"slices"
-	"strconv"
-	"strings"
 )
 
 type fetRoom struct {
@@ -15,7 +9,7 @@ type fetRoom struct {
 	Name                         string   // e.g. k3 ...
 	Long_Name                    string
 	Capacity                     int           // 30000
-	Virtual                      bool          // false`
+	Virtual                      bool          // false
 	Number_of_Sets_of_Real_Rooms int           `xml:",omitempty"`
 	Set_of_Real_Rooms            []realRoomSet `xml:",omitempty"`
 	Comments                     string
@@ -52,41 +46,22 @@ type roomChoice struct {
 // Generate the fet entries for the basic ("real") rooms.
 func getRooms(fetinfo *fetInfo) {
 	rooms := []fetRoom{}
-	for _, ti := range fetinfo.wzdb.TableMap["ROOMS"] {
-		n := fetinfo.wzdb.GetNode(ti).(wzbase.Room)
-		if len(n.SUBROOMS) == 0 {
-			rooms = append(rooms, fetRoom{
-				Name:      n.ID,
-				Long_Name: n.NAME,
-				Capacity:  30000,
-				Virtual:   false,
-				Comments:  fetinfo.wzdb.SourceReferences[ti],
-			})
-		} else {
-			// Make a virtual room
-			rrlist := []realRoomSet{}
-			for _, ri := range n.SUBROOMS {
-				rrlist = append(rrlist, realRoomSet{
-					Number_of_Real_Rooms: 1,
-					Real_Room:            []string{fetinfo.ref2fet[ri]},
-				})
-			}
-			rooms = append(rooms, fetRoom{
-				Name:                         n.ID,
-				Long_Name:                    n.NAME,
-				Capacity:                     30000,
-				Virtual:                      true,
-				Number_of_Sets_of_Real_Rooms: len(rrlist),
-				Set_of_Real_Rooms:            rrlist,
-				Comments:                     fetinfo.wzdb.SourceReferences[ti],
-			})
-		}
+	for _, n := range fetinfo.db.Rooms {
+		rooms = append(rooms, fetRoom{
+			Name:      n.Tag,
+			Long_Name: n.Name,
+			Capacity:  30000,
+			Virtual:   false,
+			Comments:  "TODO: A source reference",
+		},
+		)
 	}
 	fetinfo.fetdata.Rooms_List = fetRoomsList{
 		Room: rooms,
 	}
 }
 
+/* TODO: Virtual rooms need to be built for more complex room requirements
 // fet can handle multiple compulsory rooms and choices by using virtual
 // rooms. It is not, however, clear how additional ("user-input") rooms
 // should be handled. So I will report them and then ignore them.
@@ -100,7 +75,7 @@ func addRoomConstraint(fetinfo *fetInfo,
 	room_choices *([]roomChoice),
 	virtual_rooms map[string]string,
 	activity_indexes []int,
-	roomspec wzbase.RoomSpec,
+	roomspec []db.DbRef,
 ) {
 	if roomspec.UserInput != 0 {
 		log.Printf("WARNING: 'User-Input' rooms are not supported.")
@@ -161,7 +136,7 @@ func addRoomConstraint(fetinfo *fetInfo,
 					Permanently_Locked: true,
 					Active:             true,
 				})
-			*/
+
 			*room_choices = append(*room_choices, roomChoice{
 				Weight_Percentage:         100,
 				Activity_Id:               ai + 1,
@@ -230,7 +205,7 @@ multiroom:
 				Permanently_Locked: true,
 				Active:             true,
 			})
-		*/
+
 		*room_choices = append(*room_choices, roomChoice{
 			Weight_Percentage:         100,
 			Activity_Id:               ai + 1,
@@ -240,3 +215,4 @@ multiroom:
 		})
 	}
 }
+*/

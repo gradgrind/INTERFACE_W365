@@ -1,37 +1,24 @@
 package db
 
-// The structures used for reading a timetable-source file exported by W365.
-
-const (
-	TypeDAY         string = "Day"
-	TypeHOUR        string = "Hour"
-	TypeTEACHER     string = "Teacher"
-	TypeSUBJECT     string = "Subject"
-	TypeROOM        string = "Room"
-	TypeROOMGROUP   string = "RoomGroup"
-	TypeCLASS       string = "Class"
-	TypeGROUP       string = "Group"
-	TypeCOURSE      string = "Course"
-	TypeSUPERCOURSE string = "SuperCourse"
-	TypeSUBCOURSE   string = "SubCourse"
-	TypeLESSON      string = "Lesson"
-)
+// The structures used for the "database"
+//TODO: Currently dealing only with the elements needed for the timetable
 
 type DbRef int // Element reference
 
+// TODO: Is this interface really necessary? It is not used at present.
 type TTNode interface {
 	// An interface for Top-Level-Elements with Id field
 	IdStr() DbRef
 }
 
 type Info struct {
+	Institution        string
 	FirstAfternoonHour int
 	MiddayBreak        []int
 }
 
 type Day struct {
 	Id   DbRef
-	Type string
 	Name string
 	Tag  string
 }
@@ -42,7 +29,6 @@ func (n *Day) IdStr() DbRef {
 
 type Hour struct {
 	Id    DbRef
-	Type  string
 	Name  string
 	Tag   string
 	Start string
@@ -60,7 +46,6 @@ type TimeSlot struct {
 
 type Teacher struct {
 	Id               DbRef
-	Type             string
 	Name             string
 	Tag              string
 	Firstname        string
@@ -80,7 +65,6 @@ func (n *Teacher) IdStr() DbRef {
 
 type Subject struct {
 	Id   DbRef
-	Type string
 	Name string
 	Tag  string
 }
@@ -91,7 +75,6 @@ func (n *Subject) IdStr() DbRef {
 
 type Room struct {
 	Id           DbRef
-	Type         string
 	Name         string
 	Tag          string
 	NotAvailable []TimeSlot
@@ -103,7 +86,6 @@ func (n *Room) IdStr() DbRef {
 
 type RoomChoiceGroup struct {
 	Id    DbRef
-	Type  string
 	Name  string
 	Tag   string
 	Rooms []DbRef
@@ -115,7 +97,6 @@ func (n *RoomChoiceGroup) IdStr() DbRef {
 
 type Class struct {
 	Id               DbRef
-	Type             string
 	Name             string
 	Tag              string
 	Level            int
@@ -140,9 +121,8 @@ func (n *Class) IdStr() DbRef {
 //}
 
 type Group struct {
-	Id   DbRef
-	Type string
-	Tag  string
+	Id  DbRef
+	Tag string
 }
 
 func (n *Group) IdStr() DbRef {
@@ -155,12 +135,11 @@ type Division struct {
 }
 
 type Course struct {
-	Id      DbRef
-	Type    string
-	Subject DbRef
-	Groups  []DbRef
-	Teacher DbRef
-	Rooms   []DbRef // Room and RoomChoiceGroup Elements permitted
+	Id       DbRef
+	Subject  DbRef
+	Groups   []DbRef
+	Teachers []DbRef
+	Rooms    []DbRef // Room and RoomChoiceGroup Elements permitted
 }
 
 func (n *Course) IdStr() DbRef {
@@ -169,7 +148,6 @@ func (n *Course) IdStr() DbRef {
 
 type SuperCourse struct {
 	Id      DbRef
-	Type    string
 	Subject DbRef
 }
 
@@ -179,7 +157,6 @@ func (n *SuperCourse) IdStr() DbRef {
 
 type SubCourse struct {
 	Id          DbRef
-	Type        string
 	SuperCourse DbRef
 	Subject     DbRef
 	Groups      []DbRef
@@ -193,7 +170,6 @@ func (n *SubCourse) IdStr() DbRef {
 
 type Lesson struct {
 	Id       DbRef
-	Type     string
 	Course   DbRef
 	Duration int
 	Day      int
@@ -206,8 +182,8 @@ func (n *Lesson) IdStr() DbRef {
 	return n.Id
 }
 
-type W365TopLevel struct {
-	W365TT           Info
+type DbTopLevel struct {
+	Info             Info
 	Days             []Day
 	Hours            []Hour
 	Teachers         []Teacher

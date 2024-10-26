@@ -52,12 +52,6 @@ type fetStudentsList struct {
 	Year    []fetClass
 }
 
-type notAvailableTime struct {
-	XMLName xml.Name `xml:"Not_Available_Time"`
-	Day     string
-	Hour    string
-}
-
 type studentsNotAvailable struct {
 	XMLName                       xml.Name `xml:"ConstraintStudentsSetNotAvailableTimes"`
 	Weight_Percentage             int

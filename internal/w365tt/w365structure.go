@@ -1,26 +1,12 @@
 package w365tt
 
 import (
+	"gradgrind/INTERFACE_W365/internal/db"
 	"log"
 	"strings"
 )
 
 // The structures used for reading a timetable-source file exported by W365.
-
-const (
-	TypeDAY         string = "Day"
-	TypeHOUR        string = "Hour"
-	TypeTEACHER     string = "Teacher"
-	TypeSUBJECT     string = "Subject"
-	TypeROOM        string = "Room"
-	TypeROOMGROUP   string = "RoomGroup"
-	TypeCLASS       string = "Class"
-	TypeGROUP       string = "Group"
-	TypeCOURSE      string = "Course"
-	TypeSUPERCOURSE string = "SuperCourse"
-	TypeSUBCOURSE   string = "SubCourse"
-	TypeLESSON      string = "Lesson"
-)
 
 type W365Ref string     // Element reference
 type W365RefList string // "List" of Element references
@@ -53,13 +39,13 @@ type TTNode interface {
 }
 
 type Info struct {
+	SchoolName         string
 	FirstAfternoonHour int
 	MiddayBreak        []int
 }
 
 type Day struct {
 	Id       W365Ref
-	Type     string
 	Name     string
 	Shortcut string
 }
@@ -69,38 +55,31 @@ func (n *Day) IdStr() W365Ref {
 }
 
 type Hour struct {
-	Id       W365Ref
-	Type     string
-	Name     string
-	Shortcut string
-	Start    string
-	End      string
-	//FirstAfternoonHour bool
-	//MiddayBreak        bool
+	Id                 W365Ref
+	Name               string
+	Shortcut           string
+	Start              string
+	End                string
+	FirstAfternoonHour bool // default = false
+	MiddayBreak        bool // default = false
 }
 
 func (n *Hour) IdStr() W365Ref {
 	return n.Id
 }
 
-type Absence struct {
-	Day  int
-	Hour int
-}
-
 type Teacher struct {
 	Id               W365Ref
-	Type             string
 	Name             string
 	Shortcut         string
 	Firstname        string
-	Absences         []Absence
-	MinLessonsPerDay int
-	MaxLessonsPerDay int
-	MaxDays          int
-	MaxGapsPerDay    int
-	MaxGapsPerWeek   int
-	MaxAfternoons    int
+	Absences         []db.TimeSlot
+	MinLessonsPerDay interface{} `json:",omitempty"`
+	MaxLessonsPerDay interface{} `json:",omitempty"`
+	MaxDays          interface{} `json:",omitempty"`
+	MaxGapsPerDay    interface{} `json:",omitempty"`
+	MaxGapsPerWeek   interface{} `json:",omitempty"`
+	MaxAfternoons    interface{} `json:",omitempty"`
 	LunchBreak       bool
 }
 
@@ -110,7 +89,6 @@ func (n *Teacher) IdStr() W365Ref {
 
 type Subject struct {
 	Id       W365Ref
-	Type     string
 	Name     string
 	Shortcut string
 }
@@ -121,10 +99,9 @@ func (n *Subject) IdStr() W365Ref {
 
 type Room struct {
 	Id       W365Ref
-	Type     string
 	Name     string
 	Shortcut string
-	Absences []Absence
+	Absences []db.TimeSlot
 }
 
 func (n *Room) IdStr() W365Ref {
@@ -133,7 +110,6 @@ func (n *Room) IdStr() W365Ref {
 
 type RoomGroup struct {
 	Id       W365Ref
-	Type     string
 	Name     string
 	Shortcut string
 	Rooms    []W365Ref
@@ -145,18 +121,17 @@ func (n *RoomGroup) IdStr() W365Ref {
 
 type Class struct {
 	Id               W365Ref
-	Type             string
 	Name             string
 	Shortcut         string
 	Level            int
 	Letter           string
-	Absences         []Absence
+	Absences         []db.TimeSlot
 	Divisions        []Division
-	MinLessonsPerDay int
-	MaxLessonsPerDay int
-	MaxGapsPerDay    int
-	MaxGapsPerWeek   int
-	MaxAfternoons    int
+	MinLessonsPerDay interface{} `json:",omitempty"`
+	MaxLessonsPerDay interface{} `json:",omitempty"`
+	MaxGapsPerDay    interface{} `json:",omitempty"`
+	MaxGapsPerWeek   interface{} `json:",omitempty"`
+	MaxAfternoons    interface{} `json:",omitempty"`
 	LunchBreak       bool
 	ForceFirstHour   bool
 }
@@ -171,7 +146,6 @@ func (n *Class) IdStr() W365Ref {
 
 type Group struct {
 	Id       W365Ref
-	Type     string
 	Shortcut string
 }
 
@@ -186,9 +160,8 @@ type Division struct {
 
 type Course struct {
 	Id             W365Ref
-	Type           string
-	Subjects       []W365Ref // if present, will be converted to Subject
-	Subject        W365Ref
+	Subjects       []W365Ref `json:",omitempty"`
+	Subject        W365Ref   `json:",omitempty"`
 	Groups         []W365Ref
 	Teachers       []W365Ref
 	PreferredRooms []W365Ref
@@ -200,7 +173,6 @@ func (n *Course) IdStr() W365Ref {
 
 type SuperCourse struct {
 	Id      W365Ref
-	Type    string
 	Subject W365Ref
 }
 
@@ -210,10 +182,9 @@ func (n *SuperCourse) IdStr() W365Ref {
 
 type SubCourse struct {
 	Id             W365Ref
-	Type           string
 	SuperCourse    W365Ref
-	Subjects       []W365Ref // if present, will be converted to Subject
-	Subject        W365Ref
+	Subjects       []W365Ref `json:",omitempty"`
+	Subject        W365Ref   `json:",omitempty"`
 	Groups         []W365Ref
 	Teachers       []W365Ref
 	PreferredRooms []W365Ref
@@ -225,7 +196,6 @@ func (n *SubCourse) IdStr() W365Ref {
 
 type Lesson struct {
 	Id         W365Ref
-	Type       string
 	Course     W365Ref
 	Duration   int
 	Day        int
