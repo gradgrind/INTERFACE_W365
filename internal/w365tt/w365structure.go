@@ -11,7 +11,7 @@ type W365Ref string // Element reference
 type Info struct {
 	SchoolName         string
 	Scenario           W365Ref
-	Schedule           W365Ref
+	Schedule           string
 	FirstAfternoonHour int
 	MiddayBreak        []int
 }

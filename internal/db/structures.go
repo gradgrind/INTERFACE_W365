@@ -115,7 +115,7 @@ type Course struct {
 	Subject   DbRef
 	Groups    []DbRef
 	Teachers  []DbRef
-	Rooms     []DbRef // Room and RoomChoiceGroup Elements permitted
+	Room      DbRef // Room, RoomGroup or RoomChoiceGroup Element
 	Reference interface{}
 }
 
@@ -131,7 +131,7 @@ type SubCourse struct {
 	Subject     DbRef
 	Groups      []DbRef
 	Teachers    []DbRef
-	Rooms       []DbRef // Room and RoomChoiceGroup Elements permitted
+	Room        DbRef // Room, RoomGroup or RoomChoiceGroup Element
 	Reference   interface{}
 }
 
@@ -154,6 +154,7 @@ type DbTopLevel struct {
 	Teachers         []Teacher
 	Subjects         []Subject
 	Rooms            []Room
+	RoomGroups       []RoomGroup
 	RoomChoiceGroups []RoomChoiceGroup
 	Classes          []Class
 	Groups           []Group

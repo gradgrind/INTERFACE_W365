@@ -44,9 +44,9 @@ type xData struct {
 	subjects     map[W365Ref]db.DbRef
 	subjectmap   map[W365Ref]string // Subject Tag (Shortcut)
 	rooms        map[W365Ref]db.DbRef
-	roomtag      map[db.DbRef]string    // Room Tag (Shortcut)
-	roomchoices  map[string]db.DbRef    // New RoomChoiceGroup name -> db Id
-	roomgroups   map[W365Ref][]db.DbRef // list of Rooms
+	roomtag      map[db.DbRef]string // Room Tag (Shortcut)
+	roomgroups   map[W365Ref]db.DbRef
+	roomchoices  map[string]db.DbRef // New RoomChoiceGroup name -> db Id
 	pregroups    map[W365Ref]string
 	groups       map[W365Ref]db.DbRef
 	classes      map[W365Ref]db.DbRef
@@ -69,26 +69,11 @@ func LoadJSON(jsonpath string) db.DbTopLevel {
 	dbdata.addTeachers()
 	dbdata.addSubjects()
 	dbdata.addRooms()
+	dbdata.addRoomGroups()
 	// RoomChoicesGroups: W365 has none of these – they must be generated
 	// from the PreferredRooms lists of courses.
 	dbdata.roomchoices = map[string]db.DbRef{}
 	dbdata.data.RoomChoiceGroups = []db.RoomChoiceGroup{}
-	// The RoomGroups from W365 are used by some courses. The listed rooms
-	// should build the Rooms list for the course.
-	dbdata.roomgroups = map[W365Ref][]db.DbRef{}
-	for _, d := range dbdata.w365.RoomGroups {
-		rlist := []db.DbRef{}
-		for _, r := range d.Rooms {
-			rr, ok := dbdata.rooms[r]
-			if !ok {
-				fmt.Printf("*ERROR* Unknown Room in RoomGroup %s:\n  %s\n",
-					d.Id, r)
-				continue
-			}
-			rlist = append(rlist, rr)
-		}
-		dbdata.roomgroups[d.Id] = rlist
-	}
 	dbdata.addGroups()
 	dbdata.addClasses()
 	dbdata.addCourses()
@@ -224,6 +209,32 @@ func (dbdata *xData) addRooms() {
 	}
 }
 
+func (dbdata *xData) addRoomGroups() {
+	dbdata.data.RoomGroups = []db.RoomGroup{}
+	dbdata.roomgroups = map[W365Ref]db.DbRef{}
+	for _, d := range dbdata.w365.RoomGroups {
+		rlist := []db.DbRef{}
+		for _, r := range d.Rooms {
+			rr, ok := dbdata.rooms[r]
+			if !ok {
+				fmt.Printf("*ERROR* Unknown Room in RoomGroup %s:\n  %s\n",
+					d.Id, r)
+				continue
+			}
+			rlist = append(rlist, rr)
+		}
+		rr := dbdata.nextId()
+		dbdata.data.RoomGroups = append(dbdata.data.RoomGroups, db.RoomGroup{
+			Id:        rr,
+			Tag:       d.Shortcut,
+			Name:      d.Name,
+			Reference: d.Id,
+			Rooms:     rlist,
+		})
+		dbdata.roomgroups[d.Id] = rr
+	}
+}
+
 func (dbdata *xData) addGroups() {
 	// Every Group must be within one – and only one – Class Division.
 	// To handle that, the data for the Groups is gathered here, but the
@@ -304,7 +315,7 @@ func (dbdata *xData) readCourse(
 	groups []W365Ref,
 	teachers []W365Ref,
 	rooms []W365Ref,
-) (db.DbRef, []db.DbRef, []db.DbRef, []db.DbRef) {
+) (db.DbRef, []db.DbRef, []db.DbRef, db.DbRef) {
 	// Deal with subject
 	var sr db.DbRef = 0
 	var ok bool
@@ -379,15 +390,14 @@ func (dbdata *xData) readCourse(
 	}
 	// Deal with rooms. W365 can have a single RoomGroup or a list of Rooms
 	rclist := []db.DbRef{} // choice list
-	var rlist []db.DbRef   // actual room list
+	var rm db.DbRef        // actual "room"
 	for _, r := range rooms {
 		rr, ok := dbdata.rooms[r]
 		if ok {
 			rclist = append(rclist, rr)
 		} else {
-			rl, ok := dbdata.roomgroups[r]
+			rm, ok = dbdata.roomgroups[r]
 			if ok {
-				rlist = rl
 				if len(rooms) != 1 {
 					rclist = []db.DbRef{}
 					fmt.Printf(
@@ -401,8 +411,8 @@ func (dbdata *xData) readCourse(
 		}
 	}
 	if len(rclist) == 1 {
-		// Make the Room compulsory.
-		rlist = rclist
+		// Take the single Room.
+		rm = rclist[0]
 	} else if len(rclist) > 1 {
 		// Need a RoomChoiceGroup.
 		// Reuse these if the same list appears again, but treat the
@@ -412,29 +422,28 @@ func (dbdata *xData) readCourse(
 			rslist = append(rslist, dbdata.roomtag[r])
 		}
 		rs := strings.Join(rslist, ",")
-		rr, ok := dbdata.roomchoices[rs]
+		rm, ok = dbdata.roomchoices[rs]
 		if !ok {
 			rk := fmt.Sprintf("RC%03d", len(dbdata.roomchoices)+1)
-			rr = dbdata.nextId()
+			rm = dbdata.nextId()
 			dbdata.data.RoomChoiceGroups = append(
 				dbdata.data.RoomChoiceGroups, db.RoomChoiceGroup{
-					Id:    rr,
+					Id:    rm,
 					Tag:   rk,
 					Name:  rs,
 					Rooms: rclist,
 				})
-			dbdata.roomchoices[rs] = rr
+			dbdata.roomchoices[rs] = rm
 		}
-		rlist = []db.DbRef{rr}
 	}
-	return sr, glist, tlist, rlist
+	return sr, glist, tlist, rm
 }
 
 func (dbdata *xData) addCourses() {
 	dbdata.data.Courses = []db.Course{}
 	dbdata.courses = map[W365Ref]db.DbRef{}
 	for _, d := range dbdata.w365.Courses {
-		sr, glist, tlist, rlist := dbdata.readCourse(
+		sr, glist, tlist, rm := dbdata.readCourse(
 			d.Id, d.Subject, d.Subjects, d.Groups, d.Teachers, d.PreferredRooms)
 		cr := dbdata.nextId()
 		dbdata.data.Courses = append(dbdata.data.Courses, db.Course{
@@ -442,7 +451,7 @@ func (dbdata *xData) addCourses() {
 			Subject:   sr,
 			Groups:    glist,
 			Teachers:  tlist,
-			Rooms:     rlist,
+			Room:      rm,
 			Reference: d.Id,
 		})
 		dbdata.courses[d.Id] = cr
@@ -473,7 +482,7 @@ func (dbdata *xData) addSubCourses() {
 	dbdata.data.SubCourses = []db.SubCourse{}
 	dbdata.subcourses = map[W365Ref]db.DbRef{}
 	for _, d := range dbdata.w365.SubCourses {
-		sr, glist, tlist, rlist := dbdata.readCourse(
+		sr, glist, tlist, rm := dbdata.readCourse(
 			d.Id, d.Subject, d.Subjects, d.Groups, d.Teachers, d.PreferredRooms)
 		sc, ok := dbdata.supercourses[d.SuperCourse]
 		if !ok {
@@ -488,7 +497,7 @@ func (dbdata *xData) addSubCourses() {
 			Subject:     sr,
 			Groups:      glist,
 			Teachers:    tlist,
-			Rooms:       rlist,
+			Room:        rm,
 			Reference:   d.Id,
 		})
 		dbdata.subcourses[d.Id] = cr

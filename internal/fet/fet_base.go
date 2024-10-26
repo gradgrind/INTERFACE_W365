@@ -5,6 +5,7 @@ import (
 	"encoding/xml"
 	"fmt"
 	"gradgrind/INTERFACE_W365/internal/db"
+	"gradgrind/INTERFACE_W365/internal/w365tt"
 	"log"
 	"strings"
 )
@@ -133,7 +134,7 @@ func make_fet_file(dbdata *db.DbTopLevel,
 			Version:          fet_version,
 			Mode:             "Official",
 			Institution_Name: dbdata.Info.Institution,
-			Comments:         "Put a Source Reference here?",
+			Comments:         string(dbdata.Reference.(w365tt.W365Ref)),
 			Time_Constraints_List: timeConstraints{
 				ConstraintBasicCompulsoryTime: basicTimeConstraint{
 					Weight_Percentage: 100, Active: true},
