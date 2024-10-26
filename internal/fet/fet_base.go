@@ -51,6 +51,10 @@ type fetInfo struct {
 	days             []string
 	hours            []string
 	fetdata          fet
+	courses          map[db.DbRef]int
+	subcourses       map[db.DbRef]int
+	supercourses     map[db.DbRef]int
+	supersubs        map[db.DbRef][]db.DbRef
 	fixed_activities []bool
 }
 
@@ -59,14 +63,12 @@ type timeConstraints struct {
 	//
 	ConstraintBasicCompulsoryTime basicTimeConstraint
 	//	ConstraintStudentsSetNotAvailableTimes []studentsNotAvailable
-	ConstraintTeacherNotAvailableTimes []teacherNotAvailable
-	/*
-		ConstraintActivityPreferredStartingTime      []startingTime
-		ConstraintMinDaysBetweenActivities           []minDaysBetweenActivities
-		ConstraintStudentsSetMaxHoursDailyInInterval []lunchBreak
-		ConstraintStudentsSetMaxGapsPerWeek          []maxGapsPerWeek
-		ConstraintStudentsSetMinHoursDaily           []minLessonsPerDay
-	*/
+	ConstraintTeacherNotAvailableTimes           []teacherNotAvailable
+	ConstraintActivityPreferredStartingTime      []startingTime
+	ConstraintMinDaysBetweenActivities           []minDaysBetweenActivities
+	ConstraintStudentsSetMaxHoursDailyInInterval []lunchBreak
+	ConstraintStudentsSetMaxGapsPerWeek          []maxGapsPerWeek
+	ConstraintStudentsSetMinHoursDaily           []minLessonsPerDay
 }
 
 type basicTimeConstraint struct {
@@ -151,6 +153,8 @@ func make_fet_file(dbdata *db.DbTopLevel,
 	getTeachers(&fetinfo)
 	getSubjects(&fetinfo)
 	getRooms(&fetinfo)
+	readCourseIndexes(&fetinfo)
+	makeAtomicGroups(&fetinfo)
 	/*
 		getClasses(&fetinfo)
 		getActivities(&fetinfo, activities, course2activities)

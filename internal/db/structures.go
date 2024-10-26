@@ -137,7 +137,7 @@ type SubCourse struct {
 
 type Lesson struct {
 	Id        DbRef
-	Course    DbRef
+	Course    DbRef // Course or SuperCourse Elements
 	Duration  int
 	Day       int
 	Hour      int

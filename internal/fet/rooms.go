@@ -53,8 +53,7 @@ func getRooms(fetinfo *fetInfo) {
 			Capacity:  30000,
 			Virtual:   false,
 			Comments:  getString(n.Reference),
-		},
-		)
+		})
 	}
 	fetinfo.fetdata.Rooms_List = fetRoomsList{
 		Room: rooms,

@@ -28,6 +28,7 @@ func TestX(t *testing.T) {
 	i = w365tt.W365Ref("XXX1")
 	fmt.Printf(" +++ %#v\n", i)
 	fmt.Printf(" --- %#v\n", getString(i))
+	panic("#BUG#")
 }
 
 func TestFet(t *testing.T) {
