@@ -147,7 +147,6 @@ type Lesson struct {
 }
 
 type DbTopLevel struct {
-	Reference        interface{}
 	Info             Info
 	Days             []Day
 	Hours            []Hour

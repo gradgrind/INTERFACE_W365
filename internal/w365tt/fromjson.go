@@ -90,10 +90,9 @@ func (dbdata *xData) nextId() db.DbRef {
 }
 
 func (dbdata *xData) addInfo() {
-	dbdata.data.Reference = dbdata.w365.W365TT.Scenario
 	dbdata.data.Info = db.Info{
 		Institution:        dbdata.w365.W365TT.SchoolName,
-		Reference:          dbdata.w365.W365TT.Schedule,
+		Reference:          dbdata.w365.W365TT.Scenario,
 		FirstAfternoonHour: dbdata.w365.W365TT.FirstAfternoonHour,
 		MiddayBreak:        dbdata.w365.W365TT.MiddayBreak,
 	}
