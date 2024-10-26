@@ -2,44 +2,16 @@ package w365tt
 
 import (
 	"gradgrind/INTERFACE_W365/internal/db"
-	"log"
-	"strings"
 )
 
 // The structures used for reading a timetable-source file exported by W365.
 
-type W365Ref string     // Element reference
-type W365RefList string // "List" of Element references
-
-func GetRefList(
-	id2node map[W365Ref]interface{},
-	reflist W365RefList,
-	messages ...string,
-) []W365Ref {
-	var rl []W365Ref
-	if reflist != "" {
-		for _, rs := range strings.Split(string(reflist), ",") {
-			rr := W365Ref(rs)
-			if _, ok := id2node[rr]; ok {
-				rl = append(rl, rr)
-			} else {
-				log.Printf("Invalid Reference in RefList: %s\n", rs)
-				for _, msg := range messages {
-					log.Printf("  ++ %s\n", msg)
-				}
-			}
-		}
-	}
-	return rl
-}
-
-type TTNode interface {
-	// An interface for Top-Level-Elements with Id field
-	IdStr() W365Ref
-}
+type W365Ref string // Element reference
 
 type Info struct {
 	SchoolName         string
+	Scenario           W365Ref
+	Schedule           W365Ref
 	FirstAfternoonHour int
 	MiddayBreak        []int
 }
@@ -50,10 +22,6 @@ type Day struct {
 	Shortcut string
 }
 
-func (n *Day) IdStr() W365Ref {
-	return n.Id
-}
-
 type Hour struct {
 	Id                 W365Ref
 	Name               string
@@ -62,10 +30,6 @@ type Hour struct {
 	End                string
 	FirstAfternoonHour bool // default = false
 	MiddayBreak        bool // default = false
-}
-
-func (n *Hour) IdStr() W365Ref {
-	return n.Id
 }
 
 type Teacher struct {
@@ -83,18 +47,10 @@ type Teacher struct {
 	LunchBreak       bool
 }
 
-func (n *Teacher) IdStr() W365Ref {
-	return n.Id
-}
-
 type Subject struct {
 	Id       W365Ref
 	Name     string
 	Shortcut string
-}
-
-func (n *Subject) IdStr() W365Ref {
-	return n.Id
 }
 
 type Room struct {
@@ -104,19 +60,11 @@ type Room struct {
 	Absences []db.TimeSlot
 }
 
-func (n *Room) IdStr() W365Ref {
-	return n.Id
-}
-
 type RoomGroup struct {
 	Id       W365Ref
 	Name     string
 	Shortcut string
 	Rooms    []W365Ref
-}
-
-func (n *RoomGroup) IdStr() W365Ref {
-	return n.Id
 }
 
 type Class struct {
@@ -136,24 +84,13 @@ type Class struct {
 	ForceFirstHour   bool
 }
 
-func (n *Class) IdStr() W365Ref {
-	return n.Id
-}
-
-//func (n *Class) Tag() string {
-//	return fmt.Sprintf("%d%s", n.Level, n.Letter)
-//}
-
 type Group struct {
 	Id       W365Ref
 	Shortcut string
 }
 
-func (n *Group) IdStr() W365Ref {
-	return n.Id
-}
-
 type Division struct {
+	Id     W365Ref // even though it is not top-level
 	Name   string
 	Groups []W365Ref
 }
@@ -167,17 +104,9 @@ type Course struct {
 	PreferredRooms []W365Ref
 }
 
-func (n *Course) IdStr() W365Ref {
-	return n.Id
-}
-
 type SuperCourse struct {
 	Id      W365Ref
 	Subject W365Ref
-}
-
-func (n *SuperCourse) IdStr() W365Ref {
-	return n.Id
 }
 
 type SubCourse struct {
@@ -190,10 +119,6 @@ type SubCourse struct {
 	PreferredRooms []W365Ref
 }
 
-func (n *SubCourse) IdStr() W365Ref {
-	return n.Id
-}
-
 type Lesson struct {
 	Id         W365Ref
 	Course     W365Ref
@@ -202,10 +127,6 @@ type Lesson struct {
 	Hour       int
 	Fixed      bool
 	LocalRooms []W365Ref
-}
-
-func (n *Lesson) IdStr() W365Ref {
-	return n.Id
 }
 
 type W365TopLevel struct {

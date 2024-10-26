@@ -40,6 +40,9 @@ func ConvertToJSON(f365xml string) string {
 	outdata := w365tt.W365TopLevel{}
 	id2node := map[w365tt.W365Ref]interface{}{}
 
+	outdata.W365TT.Scenario = indata.SchoolState.ActiveScenario
+	outdata.W365TT.SchoolName = indata.SchoolState.SchoolName
+	outdata.W365TT.Schedule = "Vorlage"
 	readDays(&outdata, id2node, indata.Days)
 	readHours(&outdata, id2node, indata.Hours)
 	for _, n := range indata.Absences {
@@ -178,7 +181,7 @@ func readRooms(
 			continue
 		}
 		msg := fmt.Sprintf("Room %s in RoomGroups", nid)
-		rg := w365tt.GetRefList(id2node, n.RoomGroups, msg)
+		rg := GetRefList(id2node, n.RoomGroups, msg)
 		if len(rg) == 0 {
 			r := w365tt.Room{
 				Id:       nid,
@@ -186,7 +189,7 @@ func readRooms(
 				Shortcut: n.Shortcut,
 			}
 			msg = fmt.Sprintf("Room %s in Absences", nid)
-			for _, ai := range w365tt.GetRefList(id2node, n.Absences, msg) {
+			for _, ai := range GetRefList(id2node, n.Absences, msg) {
 				an := id2node[ai]
 				r.Absences = append(r.Absences, db.TimeSlot{
 					Day:  an.(Absence).Day,
@@ -231,7 +234,7 @@ func readTeachers(
 			LunchBreak:    true,
 		}
 		msg := fmt.Sprintf("Teacher %s in Absences", nid)
-		for _, ai := range w365tt.GetRefList(id2node, n.Absences, msg) {
+		for _, ai := range GetRefList(id2node, n.Absences, msg) {
 			an := id2node[ai]
 			r.Absences = append(r.Absences, db.TimeSlot{
 				Day:  an.(Absence).Day,
@@ -303,7 +306,7 @@ func readClasses(
 			ForceFirstHour: n.ForceFirstHour,
 		}
 		msg := fmt.Sprintf("Class %s in Absences", nid)
-		for _, ai := range w365tt.GetRefList(id2node, n.Absences, msg) {
+		for _, ai := range GetRefList(id2node, n.Absences, msg) {
 			an := id2node[ai]
 			r.Absences = append(r.Absences, db.TimeSlot{
 				Day:  an.(Absence).Day,
@@ -314,16 +317,17 @@ func readClasses(
 		// Initialize Divisions to get [] instead of null, when empty
 		r.Divisions = []w365tt.Division{}
 		msg = fmt.Sprintf("Class %s in Divisions", nid)
-		for i, d := range w365tt.GetRefList(id2node, n.Divisions, msg) {
+		for i, d := range GetRefList(id2node, n.Divisions, msg) {
 			dn := id2node[d].(Division)
 			msg = fmt.Sprintf("Division %s in Groups", d)
-			glist := w365tt.GetRefList(id2node, dn.Groups, msg)
+			glist := GetRefList(id2node, dn.Groups, msg)
 			if len(glist) != 0 {
 				nm := dn.Name
 				if nm == "" {
 					nm = fmt.Sprintf("#div%d", i)
 				}
 				r.Divisions = append(r.Divisions, w365tt.Division{
+					Id:     dn.Id,
 					Name:   nm,
 					Groups: glist,
 				})
@@ -344,13 +348,13 @@ func readCourses(
 			continue
 		}
 		msg := fmt.Sprintf("Course %s in Subjects", nid)
-		sbjs := w365tt.GetRefList(id2node, n.Subjects, msg)
+		sbjs := GetRefList(id2node, n.Subjects, msg)
 		msg = fmt.Sprintf("Course %s in Groups", nid)
-		grps := w365tt.GetRefList(id2node, n.Groups, msg)
+		grps := GetRefList(id2node, n.Groups, msg)
 		msg = fmt.Sprintf("Course %s in Teachers", nid)
-		tchs := w365tt.GetRefList(id2node, n.Teachers, msg)
+		tchs := GetRefList(id2node, n.Teachers, msg)
 		msg = fmt.Sprintf("Course %s in PreferredRooms", nid)
-		rms := w365tt.GetRefList(id2node, n.PreferredRooms, msg)
+		rms := GetRefList(id2node, n.PreferredRooms, msg)
 		outdata.Courses = append(outdata.Courses, w365tt.Course{
 			Id:             nid,
 			Subjects:       sbjs,
@@ -373,13 +377,13 @@ func readEpochPlanCourses(
 			continue
 		}
 		msg := fmt.Sprintf("EpochPlanCourse %s in Subjects", nid)
-		sbjs := w365tt.GetRefList(id2node, n.Subjects, msg)
+		sbjs := GetRefList(id2node, n.Subjects, msg)
 		msg = fmt.Sprintf("EpochPlanCourse %s in Groups", nid)
-		grps := w365tt.GetRefList(id2node, n.Groups, msg)
+		grps := GetRefList(id2node, n.Groups, msg)
 		msg = fmt.Sprintf("EpochPlanCourse %s in Teachers", nid)
-		tchs := w365tt.GetRefList(id2node, n.Teachers, msg)
+		tchs := GetRefList(id2node, n.Teachers, msg)
 		msg = fmt.Sprintf("EpochPlanCourse %s in PreferredRooms", nid)
-		rms := w365tt.GetRefList(id2node, n.PreferredRooms, msg)
+		rms := GetRefList(id2node, n.PreferredRooms, msg)
 		outdata.Courses = append(outdata.Courses, w365tt.Course{
 			Id:             nid,
 			Subjects:       sbjs,
@@ -417,7 +421,29 @@ func readLessons(
 			Day:        n.Day,
 			Hour:       n.Hour,
 			Fixed:      n.Fixed,
-			LocalRooms: w365tt.GetRefList(id2node, n.LocalRooms, msg),
+			LocalRooms: GetRefList(id2node, n.LocalRooms, msg),
 		})
 	}
+}
+
+func GetRefList(
+	id2node map[w365tt.W365Ref]interface{},
+	reflist W365RefList,
+	messages ...string,
+) []w365tt.W365Ref {
+	var rl []w365tt.W365Ref
+	if reflist != "" {
+		for _, rs := range strings.Split(string(reflist), ",") {
+			rr := w365tt.W365Ref(rs)
+			if _, ok := id2node[rr]; ok {
+				rl = append(rl, rr)
+			} else {
+				log.Printf("Invalid Reference in RefList: %s\n", rs)
+				for _, msg := range messages {
+					log.Printf("  ++ %s\n", msg)
+				}
+			}
+		}
+	}
+	return rl
 }

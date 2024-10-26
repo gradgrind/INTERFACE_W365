@@ -5,38 +5,27 @@ package db
 
 type DbRef int // Element reference
 
-// TODO: Is this interface really necessary? It is not used at present.
-type TTNode interface {
-	// An interface for Top-Level-Elements with Id field
-	IdStr() DbRef
-}
-
 type Info struct {
 	Institution        string
 	FirstAfternoonHour int
 	MiddayBreak        []int
+	Reference          interface{}
 }
 
 type Day struct {
-	Id   DbRef
-	Name string
-	Tag  string
-}
-
-func (n *Day) IdStr() DbRef {
-	return n.Id
+	Id        DbRef
+	Name      string
+	Tag       string
+	Reference interface{}
 }
 
 type Hour struct {
-	Id    DbRef
-	Name  string
-	Tag   string
-	Start string
-	End   string
-}
-
-func (n *Hour) IdStr() DbRef {
-	return n.Id
+	Id        DbRef
+	Name      string
+	Tag       string
+	Start     string
+	End       string
+	Reference interface{}
 }
 
 type TimeSlot struct {
@@ -57,20 +46,14 @@ type Teacher struct {
 	MaxGapsPerWeek   int
 	MaxAfternoons    int
 	LunchBreak       bool
-}
-
-func (n *Teacher) IdStr() DbRef {
-	return n.Id
+	Reference        interface{}
 }
 
 type Subject struct {
-	Id   DbRef
-	Name string
-	Tag  string
-}
-
-func (n *Subject) IdStr() DbRef {
-	return n.Id
+	Id        DbRef
+	Name      string
+	Tag       string
+	Reference interface{}
 }
 
 type Room struct {
@@ -78,21 +61,23 @@ type Room struct {
 	Name         string
 	Tag          string
 	NotAvailable []TimeSlot
+	Reference    interface{}
 }
 
-func (n *Room) IdStr() DbRef {
-	return n.Id
+type RoomGroup struct {
+	Id        DbRef
+	Name      string
+	Tag       string
+	Rooms     []DbRef
+	Reference interface{}
 }
 
 type RoomChoiceGroup struct {
-	Id    DbRef
-	Name  string
-	Tag   string
-	Rooms []DbRef
-}
-
-func (n *RoomChoiceGroup) IdStr() DbRef {
-	return n.Id
+	Id        DbRef
+	Name      string
+	Tag       string
+	Rooms     []DbRef
+	Reference interface{}
 }
 
 type Class struct {
@@ -110,49 +95,34 @@ type Class struct {
 	MaxAfternoons    int
 	LunchBreak       bool
 	ForceFirstHour   bool
+	Reference        interface{}
 }
-
-func (n *Class) IdStr() DbRef {
-	return n.Id
-}
-
-//func (n *Class) Tag() string {
-//	return fmt.Sprintf("%d%s", n.Level, n.Letter)
-//}
 
 type Group struct {
-	Id  DbRef
-	Tag string
-}
-
-func (n *Group) IdStr() DbRef {
-	return n.Id
+	Id        DbRef
+	Tag       string
+	Reference interface{}
 }
 
 type Division struct {
-	Name   string
-	Groups []DbRef
+	Name      string
+	Groups    []DbRef
+	Reference interface{}
 }
 
 type Course struct {
-	Id       DbRef
-	Subject  DbRef
-	Groups   []DbRef
-	Teachers []DbRef
-	Rooms    []DbRef // Room and RoomChoiceGroup Elements permitted
-}
-
-func (n *Course) IdStr() DbRef {
-	return n.Id
+	Id        DbRef
+	Subject   DbRef
+	Groups    []DbRef
+	Teachers  []DbRef
+	Rooms     []DbRef // Room and RoomChoiceGroup Elements permitted
+	Reference interface{}
 }
 
 type SuperCourse struct {
-	Id      DbRef
-	Subject DbRef
-}
-
-func (n *SuperCourse) IdStr() DbRef {
-	return n.Id
+	Id        DbRef
+	Subject   DbRef
+	Reference interface{}
 }
 
 type SubCourse struct {
@@ -162,27 +132,22 @@ type SubCourse struct {
 	Groups      []DbRef
 	Teachers    []DbRef
 	Rooms       []DbRef // Room and RoomChoiceGroup Elements permitted
-}
-
-func (n *SubCourse) IdStr() DbRef {
-	return n.Id
+	Reference   interface{}
 }
 
 type Lesson struct {
-	Id       DbRef
-	Course   DbRef
-	Duration int
-	Day      int
-	Hour     int
-	Fixed    bool
-	Rooms    []DbRef // only Room Elements
-}
-
-func (n *Lesson) IdStr() DbRef {
-	return n.Id
+	Id        DbRef
+	Course    DbRef
+	Duration  int
+	Day       int
+	Hour      int
+	Fixed     bool
+	Rooms     []DbRef // only Room Elements
+	Reference interface{}
 }
 
 type DbTopLevel struct {
+	Reference        interface{}
 	Info             Info
 	Days             []Day
 	Hours            []Hour
