@@ -55,6 +55,8 @@ type fetInfo struct {
 	subcourses       map[db.DbRef]int
 	supercourses     map[db.DbRef]int
 	supersubs        map[db.DbRef][]db.DbRef
+	classdivisions   map[db.DbRef][][]db.DbRef
+	atomicgroups     map[db.DbRef][]AtomicGroup
 	fixed_activities []bool
 }
 
