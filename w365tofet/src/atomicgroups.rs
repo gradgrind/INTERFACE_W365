@@ -16,8 +16,8 @@ impl fmt::Debug for AtomicGroup {
     }
 }
 
-fn main() {
-    println!("Hello from testag!");
+pub fn atomic_groups() {
+    println!("Hello from atomicGroups!");
 
     let clid = 1;
     let mut divs: Vec<Vec<DbRef>> = Vec::new();
