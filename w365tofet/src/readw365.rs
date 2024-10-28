@@ -1,10 +1,29 @@
 use serde::{Deserialize, Serialize};
-use serde_json::Result;
+use serde_json::{Result, Value};
+use std::fs;
 
+pub fn read_w365(jsonpath: String) {
+
+    let w365json = fs::read_to_string(jsonpath)
+        .expect("Couldn't read input file");
+
+    let w365data: W365TopLevel = serde_json::from_str(&w365json)
+        .expect("Couldn't parse JSON");
+    println!("{:#?}", w365data);
+}
 // The structures used for reading a timetable-source file exported by W365.
 
 type W365Ref = String; // Element reference
 
+#[allow(nonstandard_style)]
+#[derive(Serialize, Deserialize, Debug)]
+struct TimeSlot {
+    Day: i32,
+    Hour: i32
+}
+
+#[allow(nonstandard_style)]
+#[derive(Serialize, Deserialize, Debug)]
 struct Info {
 	SchoolName:         String,
 	Scenario:           W365Ref,
@@ -12,12 +31,16 @@ struct Info {
 	MiddayBreak:        Vec<i32>
 }
 
+#[allow(nonstandard_style)]
+#[derive(Serialize, Deserialize, Debug)]
 struct Day {
 	Id:         W365Ref,
 	Name:       String,
 	Shortcut:   String
 }
 
+#[allow(nonstandard_style)]
+#[derive(Serialize, Deserialize, Debug)]
 struct Hour {
 	Id:                 W365Ref,
 	Name:               String,
@@ -30,16 +53,14 @@ struct Hour {
 
 fn default_m1() -> i32 { -1 }
 
-
-//TODO: Use a tuple for a timeslot?
-
-#[derive(Deserialize, Serialize)]
+#[allow(nonstandard_style)]
+#[derive(Serialize, Deserialize, Debug)]
 struct Teacher {
 	Id:               W365Ref,
 	Name:             String,
 	Shortcut:         String,
 	Firstname:        String,
-	Absences:         Vec<(usize, usize)>,
+	Absences:         Vec<TimeSlot>,
 	#[serde(default = "default_m1")]
     MinLessonsPerDay: i32,
 	#[serde(default = "default_m1")]
@@ -55,19 +76,25 @@ struct Teacher {
 	LunchBreak:       bool
 }
 
+#[allow(nonstandard_style)]
+#[derive(Serialize, Deserialize, Debug)]
 struct Subject {
 	Id:         W365Ref,
 	Name:       String,
 	Shortcut:   String
 }
 
+#[allow(nonstandard_style)]
+#[derive(Serialize, Deserialize, Debug)]
 struct Room {
 	Id:         W365Ref,
 	Name:       String,
 	Shortcut:   String,
-	Absences:   Vec<(usize, usize)>
+	Absences:   Vec<TimeSlot>
 }
 
+#[allow(nonstandard_style)]
+#[derive(Serialize, Deserialize, Debug)]
 struct RoomGroup {
 	Id:         W365Ref,
 	Name:       String,
@@ -75,14 +102,15 @@ struct RoomGroup {
 	Rooms:      Vec<W365Ref>
 }
 
-#[derive(Deserialize, Serialize)]
+#[allow(nonstandard_style)]
+#[derive(Serialize, Deserialize, Debug)]
 struct Class {
 	Id:                 W365Ref,
 	Name:               String,
 	Shortcut:           String,
 	Level:              i32,
 	Letter:             String,
-	Absences:           Vec<(usize, usize)>,
+	Absences:           Vec<TimeSlot>,
 	Divisions:          Vec<Division>,
 	#[serde(default = "default_m1")]
     MinLessonsPerDay:   i32,
@@ -98,33 +126,43 @@ struct Class {
 	ForceFirstHour:     bool
 }
 
+#[allow(nonstandard_style)]
+#[derive(Serialize, Deserialize, Debug)]
 struct Group {
 	Id:         W365Ref,
 	Shortcut:   String
 }
 
-#[derive(Deserialize, Serialize)]
+#[allow(nonstandard_style)]
+#[derive(Serialize, Deserialize, Debug)]
 struct Division {
 	Id:         W365Ref, // even though it is not top-level
 	Name:       String,
 	Groups:     Vec<W365Ref>
 }
 
+#[allow(nonstandard_style)]
+#[derive(Serialize, Deserialize, Debug)]
 struct Course {
 	Id:             W365Ref,
+	#[serde(default)]
 	Subjects:       Vec<W365Ref>,
-	Subject:        W365Ref,
+	#[serde(default)]
+    Subject:        W365Ref,
 	Groups:         Vec<W365Ref>,
 	Teachers:       Vec<W365Ref>,
 	PreferredRooms: Vec<W365Ref>
 }
 
+#[allow(nonstandard_style)]
+#[derive(Serialize, Deserialize, Debug)]
 struct SuperCourse {
 	Id:         W365Ref,
 	Subject:    W365Ref
 }
 
-#[derive(Deserialize, Serialize)]
+#[allow(nonstandard_style)]
+#[derive(Serialize, Deserialize, Debug)]
 struct SubCourse {
 	Id:             W365Ref,
 	SuperCourse:    W365Ref,
@@ -137,6 +175,8 @@ struct SubCourse {
 	PreferredRooms: Vec<W365Ref>
 }
 
+#[allow(nonstandard_style)]
+#[derive(Serialize, Deserialize, Debug)]
 struct Lesson {
 	Id:         W365Ref,
 	Course:     W365Ref,
@@ -147,10 +187,12 @@ struct Lesson {
 	LocalRooms: Vec<W365Ref>
 }
 
+#[allow(nonstandard_style)]
+#[derive(Serialize, Deserialize, Debug)]
 struct W365TopLevel {
 	W365TT:         Info,
-	Days:           Day,
-	Hours:          Hour,
+	Days:           Vec<Day>,
+	Hours:          Vec<Hour>,
 	Teachers:       Vec<Teacher>,
 	Subjects:       Vec<Subject>,
 	Rooms:          Vec<Room>,
@@ -161,5 +203,5 @@ struct W365TopLevel {
 	SuperCourses:   Vec<SuperCourse>,
 	SubCourses:     Vec<SubCourse>,
 	Lessons:        Vec<Lesson>,
-	Constraints:    map[string]interface{}
+	Constraints:    Value
 }
