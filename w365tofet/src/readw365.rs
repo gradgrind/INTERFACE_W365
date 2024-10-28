@@ -1,16 +1,18 @@
 use serde::{Deserialize, Serialize};
-use serde_json::{Result, Value};
+use serde_json::Value;
 use std::fs;
+use std::error::Error;
 
-pub fn read_w365(jsonpath: String) -> W365TopLevel {
+pub fn read_w365(jsonpath: &String) -> Result<W365TopLevel,Box<dyn Error>> {
 
-    let w365json = fs::read_to_string(jsonpath)
-        .expect("Couldn't read input file");
+    let w365json = fs::read_to_string(jsonpath)?;
+//        .expect("Couldn't read input file");
 
-    let w365data: W365TopLevel = serde_json::from_str(&w365json)
-        .expect("Couldn't parse JSON");
-    return w365data;
+    let w365data: W365TopLevel = serde_json::from_str(&w365json)?;
+//        .expect("Couldn't parse JSON");
+    Ok(w365data)
 }
+
 // The structures used for reading a timetable-source file exported by W365.
 
 pub type W365Ref = String; // Element reference
