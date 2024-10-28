@@ -1,6 +1,7 @@
 pub mod atomicgroups;
 pub mod readw365;
 pub mod db;
+pub mod w365todb;
 use std::env;
 use std::process::ExitCode;
 
