@@ -3,6 +3,8 @@ use serde_json::Value;
 use std::fs;
 use std::error::Error;
 
+use crate::db;
+
 pub fn read_w365(jsonpath: &String) -> Result<W365TopLevel,Box<dyn Error>> {
 
     let w365json = fs::read_to_string(jsonpath)?;
@@ -17,12 +19,7 @@ pub fn read_w365(jsonpath: &String) -> Result<W365TopLevel,Box<dyn Error>> {
 
 pub type W365Ref = String; // Element reference
 
-#[allow(nonstandard_style)]
-#[derive(Serialize, Deserialize, Debug)]
-pub struct TimeSlot {
-    pub Day: i32,
-    pub Hour: i32
-}
+type TimeSlot = db::TimeSlot;
 
 #[allow(nonstandard_style)]
 #[derive(Serialize, Deserialize, Debug)]

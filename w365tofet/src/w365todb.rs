@@ -60,6 +60,8 @@ pub fn w365_db(w365data: readw365::W365TopLevel)
     };
 
 	add_days(&mut dbdata, &w365data.Days);
+	add_hours(&mut dbdata, &w365data.Hours);
+	add_teachers(&mut dbdata, &w365data.Teachers);
     Ok(dbdata.data)
 }
 
@@ -79,6 +81,70 @@ fn add_days(dbdata: &mut XData, days: &Vec<readw365::Day>) {
 		})
 	}
 }
+
+fn add_hours(dbdata: &mut XData, hours: &Vec<readw365::Hour>) {
+	let mdbok = dbdata.data.Info.MiddayBreak.is_empty();
+    let mut i = 0;
+	for d in hours.iter() {
+		if d.FirstAfternoonHour {
+			dbdata.data.Info.FirstAfternoonHour = i;
+		}
+		if d.MiddayBreak {
+			if mdbok {
+				dbdata.data.Info.MiddayBreak.push(i);
+			} else {
+				eprintln!("*ERROR* MiddayBreak set in Info AND Hours")
+			}
+		}
+        i += 1;
+		let id = next_id(dbdata);
+		dbdata.data.Hours.push(db::Hour{
+			Id:        id,
+			Tag:       if d.Shortcut.is_empty() {
+                format!("({})", i)
+            } else {
+                d.Shortcut.clone()
+            },
+			Name:      d.Name.clone(),
+			Start:     d.Start.clone(),
+			End:       d.End.clone(),
+			Reference: json!(d.Id)
+		})
+	}
+}
+
+fn clone_absences(alist: &Vec<db::TimeSlot>) -> Vec<db::TimeSlot> {
+    let mut a: Vec<db::TimeSlot> = Vec::new();
+    if !alist.is_empty() {
+        for t in alist.iter() {
+            a.push(db::TimeSlot{Day: t.Day, Hour: t.Hour});
+        }
+    }
+    a
+}
+
+fn add_teachers(dbdata: &mut XData, teachers: &Vec<readw365::Teacher>) {
+	for d in teachers.iter() {
+		let id = next_id(dbdata);
+		dbdata.data.Teachers.push(db::Teacher{
+			Id:                 id,
+            Tag:                d.Shortcut.clone(),
+			Name:               d.Name.clone(),
+			Firstname:          d.Firstname.clone(),
+			NotAvailable:       clone_absences(&d.Absences),
+			MinLessonsPerDay:   d.MinLessonsPerDay,
+			MaxLessonsPerDay:   d.MaxLessonsPerDay,
+			MaxDays:            d.MaxDays,
+			MaxGapsPerDay:      d.MaxGapsPerDay,
+			MaxGapsPerWeek:     d.MaxGapsPerWeek,
+			MaxAfternoons:      d.MaxAfternoons,
+			LunchBreak:         d.LunchBreak,
+			Reference:          json!(d.Id)
+		});
+		dbdata.teachers.insert(d.Id.clone(), id);
+	}
+}
+
 
 /*
 
@@ -108,71 +174,6 @@ func LoadJSON(jsonpath string) db.DbTopLevel {
 	dbdata.addSubCourses()
 	dbdata.addLessons()
 	return dbdata.data
-}
-
-func (dbdata *xData) nextId() DbRef {
-	dbdata.dbi++
-	return dbdata.dbi
-}
-
-
-
-func (dbdata *xData) addHours() {
-	dbdata.data.Hours = []db.Hour{}
-	mdbok := len(dbdata.data.Info.MiddayBreak) == 0
-	for i, d := range dbdata.w365.Hours {
-		if d.FirstAfternoonHour {
-			dbdata.data.Info.FirstAfternoonHour = i
-		}
-		if d.MiddayBreak {
-			if mdbok {
-				dbdata.data.Info.MiddayBreak = append(
-					dbdata.data.Info.MiddayBreak, i)
-			} else {
-				fmt.Printf("*ERROR* MiddayBreak set in Info AND Hours\n")
-			}
-		}
-		tag := d.Shortcut
-		if tag == "" {
-			tag = fmt.Sprintf("(%d)", i+1)
-		}
-		dbdata.data.Hours = append(dbdata.data.Hours, db.Hour{
-			Id:        dbdata.nextId(),
-			Tag:       tag,
-			Name:      d.Name,
-			Start:     d.Start,
-			End:       d.End,
-			Reference: string(d.Id),
-		})
-	}
-}
-
-func (dbdata *xData) addTeachers() {
-	dbdata.data.Teachers = []db.Teacher{}
-	dbdata.teachers = MapWDb{}
-	for _, d := range dbdata.w365.Teachers {
-		a := d.Absences
-		if len(d.Absences) == 0 {
-			a = []db.TimeSlot{}
-		}
-		tr := dbdata.nextId()
-		dbdata.data.Teachers = append(dbdata.data.Teachers, db.Teacher{
-			Id:               tr,
-			Tag:              d.Shortcut,
-			Name:             d.Name,
-			Firstname:        d.Firstname,
-			NotAvailable:     a,
-			MinLessonsPerDay: defaultMinus1(d.MinLessonsPerDay),
-			MaxLessonsPerDay: defaultMinus1(d.MaxLessonsPerDay),
-			MaxDays:          defaultMinus1(d.MaxDays),
-			MaxGapsPerDay:    defaultMinus1(d.MaxGapsPerDay),
-			MaxGapsPerWeek:   defaultMinus1(d.MaxGapsPerWeek),
-			MaxAfternoons:    defaultMinus1(d.MaxAfternoons),
-			LunchBreak:       d.LunchBreak,
-			Reference:        string(d.Id),
-		})
-		dbdata.teachers[d.Id] = tr
-	}
 }
 
 func (dbdata *xData) addSubjects() {
