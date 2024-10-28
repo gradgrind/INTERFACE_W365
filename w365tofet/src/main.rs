@@ -9,7 +9,9 @@ fn main() {
     println!("The current directory is {}", path.display());
 
     
-    readw365::read_w365("../internal/_testdata/test1r.json".to_string());
+    let w365data = readw365::read_w365("../internal/_testdata/test1r.json".to_string());
+    //println!("{:#?}", w365data);
+    println!("{:#?}", w365data.Classes);
 
     //atomicgroups::atomic_groups();
 }
