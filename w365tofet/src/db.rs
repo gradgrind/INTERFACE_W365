@@ -21,6 +21,17 @@ pub struct Info {
     pub Reference:          Value
 }
 
+impl Info {
+    fn new() -> Self {
+        Info {
+            Institution:        String::new(),
+		    FirstAfternoonHour: 0,
+            MiddayBreak:        Vec::new(),
+            Reference:          Value::Null
+        }
+    }
+}
+
 #[allow(nonstandard_style)]
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Day {
@@ -196,4 +207,26 @@ pub struct DbTopLevel {
 	pub SubCourses:         Vec<SubCourse>,
 	pub Lessons:            Vec<Lesson>,
 	pub Constraints:        Value
+}
+
+impl DbTopLevel {
+    pub fn new(info: Info) -> Self {
+        DbTopLevel {
+            Info:               info,
+		    Days:               Vec::new(),
+            Hours:              Vec::new(),
+            Teachers:           Vec::new(),
+            Subjects:           Vec::new(),
+            Rooms:              Vec::new(),
+            RoomGroups:         Vec::new(),
+            RoomChoiceGroups:   Vec::new(),
+            Classes:            Vec::new(),
+            Groups:             Vec::new(),
+            Courses:            Vec::new(),
+            SuperCourses:       Vec::new(),
+            SubCourses:         Vec::new(),
+            Lessons:            Vec::new(),
+            Constraints:        Value::Null
+        }
+    }
 }

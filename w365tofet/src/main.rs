@@ -4,6 +4,7 @@ pub mod db;
 pub mod w365todb;
 use std::env;
 use std::process::ExitCode;
+use w365todb::w365_db;
 
 
 fn main() -> ExitCode {
@@ -20,6 +21,14 @@ fn main() -> ExitCode {
     };
     //println!("{:#?}", w365data);
     //println!("{:#?}", w365data.Classes);
+
+    let xxx =  match w365_db(w365data) {
+        Ok(x) => x,
+        Err(err) => {
+            eprintln!("Error: {}:\n  \"{}\"", err, &inpath);
+            return ExitCode::from(1);
+        },
+    };
 
     //TODO: Not w365data:: Classes, but those from db!
     //atomicgroups::atomic_groups(&w365data.Classes);

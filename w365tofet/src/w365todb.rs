@@ -3,6 +3,7 @@ use crate::readw365::W365Ref;
 use crate::db;
 use crate::db::DbRef;
 use std::collections::BTreeMap;
+use serde_json::json;
 
 type MapWDb = BTreeMap<W365Ref, DbRef>;
 type MapWStr = BTreeMap<W365Ref, String>;
@@ -11,7 +12,7 @@ type MapDbStr = BTreeMap<DbRef, String>;
 
 
 struct XData {
-	w365:         readw365::W365TopLevel,
+	//w365:         readw365::W365TopLevel,
 	data:         db::DbTopLevel,
 	dbi:          DbRef, // counter, for db indexes
 	teachers:     MapWDb,
@@ -30,52 +31,56 @@ struct XData {
 	newsubjects:  MapStrDb // New Subject name -> db Id
 }
 
+pub fn w365_db(w365data: readw365::W365TopLevel)
+        -> Result<db::DbTopLevel, String>
+{
+	let mut dbdata = XData{
+        //w365:           w365data,
+        data:           db::DbTopLevel::new(db::Info{
+            Institution:        w365data.W365TT.SchoolName.clone(),
+            FirstAfternoonHour: w365data.W365TT.FirstAfternoonHour,
+            MiddayBreak:        w365data.W365TT.MiddayBreak.clone(),
+            Reference:          json!(w365data.W365TT.Scenario)
+        }),
+        dbi:            0,
+        teachers:       BTreeMap::new(),
+        subjects:       BTreeMap::new(),
+        subjectmap:     BTreeMap::new(),
+        rooms:          BTreeMap::new(),
+        roomtag:        BTreeMap::new(),
+        roomgroups:     BTreeMap::new(),
+        roomchoices:    BTreeMap::new(),
+        pregroups:      BTreeMap::new(),
+        groups:         BTreeMap::new(),
+        classes:        BTreeMap::new(),
+        courses:        BTreeMap::new(),
+        subcourses:     BTreeMap::new(),
+        supercourses:   BTreeMap::new(),
+        newsubjects:    BTreeMap::new()
+    };
+
+	add_days(&mut dbdata, &w365data.Days);
+    Ok(dbdata.data)
+}
+
+fn next_id(dbdata: &mut XData) -> DbRef {
+    dbdata.dbi += 1;
+    dbdata.dbi
+}
+
+fn add_days(dbdata: &mut XData, days: &Vec<readw365::Day>) {
+	for d in days.iter() {
+        let id = next_id(dbdata);
+		dbdata.data.Days.push(db::Day{
+			Id:        id,
+			Tag:       d.Shortcut.clone(),
+			Name:      d.Name.clone(),
+			Reference: json!(d.Id)
+		})
+	}
+}
+
 /*
-func ReadJSON(jsonpath string) W365TopLevel {
-	// Open the  JSON file
-	jsonFile, err := os.Open(jsonpath)
-	if err != nil {
-		log.Fatal(err)
-	}
-	// Remember to close the file at the end of the function
-	defer jsonFile.Close()
-	// read the opened XML file as a byte array.
-	byteValue, _ := io.ReadAll(jsonFile)
-	log.Printf("*+ Reading: %s\n", jsonpath)
-	v := W365TopLevel{}
-	err = json.Unmarshal(byteValue, &v)
-	if err != nil {
-		log.Fatalf("Could not unmarshal json: %s\n", err)
-	}
-	return v
-}
-
-func defaultMinus1(v interface{}) int {
-	if v == nil {
-		return -1
-	}
-	return int(v.(float64))
-}
-
-type xData struct {
-	w365         W365TopLevel
-	data         db.DbTopLevel
-	dbi          DbRef // counter, for db indexes
-	teachers     MapWDb
-	subjects     MapWDb
-	subjectmap   MapWStr // Subject Tag (Shortcut)
-	rooms        MapWDb
-	roomtag      MapDbStr // Room Tag (Shortcut)
-	roomgroups   MapWDb
-	roomchoices  MapStrDb // New RoomChoiceGroup name -> db Id
-	pregroups    MapWStr
-	groups       MapWDb
-	classes      MapWDb
-	courses      MapWDb
-	subcourses   MapWDb
-	supercourses MapWDb
-	newsubjects  MapStrDb // New Subject name -> db Id
-}
 
 func LoadJSON(jsonpath string) db.DbTopLevel {
 	dbdata := xData{
@@ -110,26 +115,7 @@ func (dbdata *xData) nextId() DbRef {
 	return dbdata.dbi
 }
 
-func (dbdata *xData) addInfo() {
-	dbdata.data.Info = db.Info{
-		Institution:        dbdata.w365.W365TT.SchoolName,
-		Reference:          string(dbdata.w365.W365TT.Scenario),
-		FirstAfternoonHour: dbdata.w365.W365TT.FirstAfternoonHour,
-		MiddayBreak:        dbdata.w365.W365TT.MiddayBreak,
-	}
-}
 
-func (dbdata *xData) addDays() {
-	dbdata.data.Days = []db.Day{}
-	for _, d := range dbdata.w365.Days {
-		dbdata.data.Days = append(dbdata.data.Days, db.Day{
-			Id:        dbdata.nextId(),
-			Tag:       d.Shortcut,
-			Name:      d.Name,
-			Reference: string(d.Id),
-		})
-	}
-}
 
 func (dbdata *xData) addHours() {
 	dbdata.data.Hours = []db.Hour{}
