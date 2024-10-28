@@ -1,11 +1,11 @@
 pub mod atomicgroups;
 pub mod readw365;
+pub mod db;
 use std::env;
 use std::process::ExitCode;
 
 
 fn main() -> ExitCode {
-    println!("Hello from testag!");
     let path = env::current_dir().expect("Fail");
     println!("The current directory is {}", path.display());
     
@@ -18,9 +18,12 @@ fn main() -> ExitCode {
         },
     };
     //println!("{:#?}", w365data);
-    println!("{:#?}", w365data.Classes);
+    //println!("{:#?}", w365data.Classes);
 
-    //atomicgroups::atomic_groups();
+    //TODO: Not w365data:: Classes, but those from db!
+    //atomicgroups::atomic_groups(&w365data.Classes);
+    
+    atomicgroups::atomic_groups_0();
 
     ExitCode::from(0)
 }

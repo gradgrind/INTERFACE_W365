@@ -16,9 +16,78 @@ impl fmt::Debug for AtomicGroup {
     }
 }
 
-pub fn atomic_groups() {
-    println!("Hello from atomicGroups!");
+/* TODO: This needs all of the translated structures!
+pub fn atomic_groups(classes: &Vec<Class>) {
+//TODO--
+    //println!("Hello from atomicGroups!");
+    
+    // Iterate over all classes
+    for cl in classes.iter() {
+        println!(" *** Class {}", cl.Shortcut);
+        let w365divs = &cl.Divisions;
 
+//TODO: Filter out divs with no lessons.
+
+
+        let mut agi: Vec<Vec<DbRef>> = vec![Vec::new()];
+        for d in w365divs.iter() {   
+            let div = &d.Groups;     
+            let mut agix: Vec<Vec<DbRef>> = Vec::new();
+            for ag in agi.iter() {
+                //println!("ag: {:?}", ag);
+                for g in div.iter() {
+                    let mut gx = ag.clone();
+                    gx.push(*g);
+                    agix.push(gx);
+                }
+            }
+            agi = agix;
+        }
+        println!("agi: {:?}", agi);
+    
+        // Make AtomicGroups
+        let mut aglist: Vec<Rc<AtomicGroup>> = Vec::new();
+        for ag in agi.iter() {
+            let mut glist: Vec<String> = Vec::new();
+            for g in  ag.iter() {
+                glist.push(format!("G{}", g));
+            }
+            let gstr = format!("{}#{}", clid, glist.join("~"));
+            //println!("#ag {:?}: {:?}", ag, gstr);
+            let ago: AtomicGroup = AtomicGroup{
+                class:  1,
+                groups: ag.clone(),
+                tag:    gstr
+            };
+            aglist.push(Rc::new(ago));
+        }
+        println!("aglist: {:?}", aglist);
+    
+        let mut g2ags: BTreeMap<DbRef, Vec<Rc<AtomicGroup>>> = BTreeMap::new();
+        let mut i = divs.len();
+        let mut n = 1;
+        while i > 0 {
+            i -= 1;
+            let mut a = 0;
+            while a < aglist.len() {
+                for g in divs[i].iter() {
+                    for _ in 0 .. n {
+                        g2ags.entry(*g).or_default().push(aglist[a].clone());
+                        a += 1;
+                    }
+                }
+            }
+            n *= divs[i].len();
+        }
+        println!("\n****************************\n  g2ags: {:?}", g2ags);
+        
+    }
+
+}
+
+*/
+
+pub fn atomic_groups_0() {
     let clid = 1;
     let mut divs: Vec<Vec<DbRef>> = Vec::new();
     divs.push(vec![1,2]);
