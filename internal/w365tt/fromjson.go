@@ -200,6 +200,7 @@ func (dbdata *xData) readRoomGroups() {
 				ti := tag + strconv.Itoa(i)
 				if !tags[ti] {
 					tag = ti
+					tags[ti] = true
 					break
 				}
 				i++
