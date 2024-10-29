@@ -6,9 +6,6 @@ import (
 	"io"
 	"log"
 	"os"
-	"slices"
-	"strconv"
-	"strings"
 )
 
 // Read to the local, tweaked DbTopLevel
@@ -77,16 +74,12 @@ func LoadJSON(jsonpath string) DbTopLevel {
 	dbdata.readRooms()
 	dbdata.readRoomGroups()
 	dbdata.readRoomChoiceGroups()
+	// W365 has no RoomChoicesGroups: – they must be generated from the
+	// PreferredRooms lists of courses.
+	dbdata.readClasses()
 
 	/*
-		dbdata.addRoomGroups()
-		// RoomChoicesGroups: W365 has none of these – they must be generated
-		// from the PreferredRooms lists of courses.
-		dbdata.roomchoices = map[string]db.DbRef{}
-		dbdata.data.RoomChoiceGroups = []db.RoomChoiceGroup{}
-		dbdata.addGroups()
-		dbdata.addClasses()
-		dbdata.addCourses()
+
 		dbdata.addCourses()
 		dbdata.addSuperCourses()
 		dbdata.addSubCourses()
@@ -155,183 +148,7 @@ func (dbdata *xData) readTeachers() {
 	}
 }
 
-func (dbdata *xData) readRooms() {
-	for i := 0; i < len(dbdata.data.Rooms); i++ {
-		n := &dbdata.data.Rooms[i]
-		dbdata.elements[n.Id] = n
-		if len(n.NotAvailable) == 0 {
-			// Avoid a null value
-			n.NotAvailable = []TimeSlot{}
-		}
-	}
-}
-
-func (dbdata *xData) readRoomGroups() {
-	tags := map[string]bool{}
-	tagless := []*RoomGroup{}
-	for i := 0; i < len(dbdata.data.RoomGroups); i++ {
-		n := &dbdata.data.RoomGroups[i]
-		dbdata.elements[n.Id] = n
-
-		n.Rooms = slices.DeleteFunc(n.Rooms, func(r Ref) bool {
-			if rm, ok := dbdata.elements[r]; ok {
-				if _, ok := rm.(*Room); ok {
-					return false
-				}
-			}
-			fmt.Printf("*ERROR* Unknown Room in RoomGroup %s:\n  %s\n",
-				n.Tag, r)
-			return true
-		})
-
-		if n.Tag == "" {
-			tagless = append(tagless, n)
-		} else {
-			tags[n.Tag] = true
-		}
-	}
-	for _, n := range tagless {
-		rlist := []string{}
-		for _, r := range n.Rooms {
-			rlist = append(rlist, dbdata.elements[r].(*Room).Tag)
-		}
-		tag := fmt.Sprintf("{%s}", strings.Join(rlist, ","))
-		i := 1
-		if tags[tag] {
-			for {
-				ti := tag + strconv.Itoa(i)
-				if !tags[ti] {
-					tag = ti
-					tags[ti] = true
-					break
-				}
-				i++
-			}
-		}
-		n.Tag = tag
-	}
-}
-
-func (dbdata *xData) readRoomChoiceGroups() {
-	tags := map[string]bool{}
-	tagless := []*RoomChoiceGroup{}
-	for i := 0; i < len(dbdata.data.RoomChoiceGroups); i++ {
-		n := &dbdata.data.RoomChoiceGroups[i]
-		dbdata.elements[n.Id] = n
-
-		n.Rooms = slices.DeleteFunc(n.Rooms, func(r Ref) bool {
-			if rm, ok := dbdata.elements[r]; ok {
-				if _, ok := rm.(*Room); ok {
-					return false
-				}
-			}
-			fmt.Printf("*ERROR* Unknown Room in RoomChoiceGroup %s:\n  %s\n",
-				n.Tag, r)
-			return true
-		})
-
-		if n.Tag == "" {
-			tagless = append(tagless, n)
-		} else {
-			tags[n.Tag] = true
-		}
-	}
-	for _, n := range tagless {
-		rlist := []string{}
-		for _, r := range n.Rooms {
-			rlist = append(rlist, dbdata.elements[r].(*Room).Tag)
-		}
-		tag := fmt.Sprintf("[%s]", strings.Join(rlist, ","))
-		i := 1
-		if tags[tag] {
-			for {
-				ti := tag + strconv.Itoa(i)
-				if !tags[ti] {
-					tag = ti
-					tags[ti] = true
-					break
-				}
-				i++
-			}
-		}
-		n.Tag = tag
-	}
-}
-
 /*
-
-func (dbdata *xData) addGroups() {
-	// Every Group must be within one – and only one – Class Division.
-	// To handle that, the data for the Groups is gathered here, but the
-	// Elements are only added to the database when the Divisions are read.
-	dbdata.data.Groups = []db.Group{}
-	dbdata.pregroups = map[Ref]string{}
-	dbdata.groups = map[Ref]db.DbRef{}
-	for _, d := range dbdata.w365.Groups {
-		dbdata.pregroups[d.Id] = d.Shortcut
-	}
-}
-
-func (dbdata *xData) addClasses() {
-	dbdata.data.Classes = []db.Class{}
-	dbdata.classes = map[Ref]db.DbRef{}
-	for _, d := range dbdata.w365.Classes {
-		a := d.Absences
-		if len(d.Absences) == 0 {
-			a = []db.TimeSlot{}
-		}
-		// Get the divisions and add their groups to the database.
-		divs := []db.Division{}
-		for _, wdiv := range d.Divisions {
-			glist := []db.DbRef{}
-			for _, g := range wdiv.Groups {
-				gtag, ok := dbdata.pregroups[g] // get Tag
-				if ok {
-					// Add Group to database
-					if _, nok := dbdata.groups[g]; nok {
-						fmt.Printf("*ERROR* Group Defined in"+
-							" multiple Divisions:\n  -- %s\n", g)
-					}
-					gr := dbdata.nextId()
-					dbdata.data.Groups = append(dbdata.data.Groups, db.Group{
-						Id:        gr,
-						Tag:       gtag,
-						Reference: string(g),
-					})
-					dbdata.groups[g] = gr
-					glist = append(glist, gr)
-				} else {
-					fmt.Printf("*ERROR* Unknown Group in Class %s,"+
-						" Division %s:\n  %s\n", d.Shortcut, wdiv.Name, g)
-				}
-			}
-			divs = append(divs, db.Division{
-				Name:      wdiv.Name,
-				Groups:    glist,
-				Reference: string(wdiv.Id),
-			})
-		}
-		cr := dbdata.nextId()
-		dbdata.data.Classes = append(dbdata.data.Classes, db.Class{
-			Id:               cr,
-			Name:             d.Name,
-			Tag:              d.Shortcut,
-			Level:            d.Level,
-			Letter:           d.Letter,
-			NotAvailable:     a,
-			Divisions:        divs,
-			MinLessonsPerDay: defaultMinus1(d.MinLessonsPerDay),
-			MaxLessonsPerDay: defaultMinus1(d.MaxLessonsPerDay),
-			MaxGapsPerDay:    defaultMinus1(d.MaxGapsPerDay),
-			MaxGapsPerWeek:   defaultMinus1(d.MaxGapsPerWeek),
-			MaxAfternoons:    defaultMinus1(d.MaxAfternoons),
-			LunchBreak:       d.LunchBreak,
-			ForceFirstHour:   d.ForceFirstHour,
-			Reference:        string(d.Id),
-		})
-		dbdata.classes[d.Id] = cr
-	}
-}
 
 func (dbdata *xData) readCourse(
 	id Ref,

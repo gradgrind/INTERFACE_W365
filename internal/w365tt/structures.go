@@ -84,7 +84,7 @@ type Class struct {
 	Tag              string `json:"Shortcut"`
 	Year             int    `json:"Level"`
 	Letter           string
-	Absences         []TimeSlot
+	NotAvailable     []TimeSlot `json:"Absences"`
 	Divisions        []Division
 	MinLessonsPerDay interface{}
 	MaxLessonsPerDay interface{}
