@@ -1,5 +1,7 @@
 package w365tt
 
+import "log"
+
 // The structures used for the "database", adapted to read from W365
 //TODO: Currently dealing only with the elements needed for the timetable
 
@@ -70,11 +72,10 @@ type RoomGroup struct {
 }
 
 type RoomChoiceGroup struct {
-	Id        Ref
-	Name      string
-	Tag       string `json:"Shortcut"`
-	Rooms     []Ref
-	Reference interface{}
+	Id    Ref
+	Name  string
+	Tag   string `json:"Shortcut"`
+	Rooms []Ref
 }
 
 type Class struct {
@@ -166,4 +167,52 @@ type DbTopLevel struct {
 	SubCourses       []SubCourse
 	Lessons          []Lesson
 	Constraints      map[string]interface{}
+}
+
+func (db *DbTopLevel) checkDb() {
+	if db.Info.MiddayBreak == nil {
+		db.Info.MiddayBreak = []int{}
+	}
+	if len(db.Days) == 0 {
+		log.Fatalln("*ERROR* No Days")
+	}
+	if len(db.Hours) == 0 {
+		log.Fatalln("*ERROR* No Hours")
+	}
+	if len(db.Teachers) == 0 {
+		log.Fatalln("*ERROR* No Teachers")
+	}
+	if len(db.Subjects) == 0 {
+		log.Fatalln("*ERROR* No Subjects")
+	}
+	if len(db.Rooms) == 0 {
+		log.Fatalln("*ERROR* No Rooms")
+	}
+	if db.RoomGroups == nil {
+		db.RoomGroups = []RoomGroup{}
+	}
+	if db.RoomChoiceGroups == nil {
+		db.RoomChoiceGroups = []RoomChoiceGroup{}
+	}
+	if len(db.Classes) == 0 {
+		log.Fatalln("*ERROR* No Classes")
+	}
+	if db.Groups == nil {
+		db.Groups = []Group{}
+	}
+	if db.Courses == nil {
+		db.Courses = []Course{}
+	}
+	if db.SuperCourses == nil {
+		db.SuperCourses = []SuperCourse{}
+	}
+	if db.SubCourses == nil {
+		db.SubCourses = []SubCourse{}
+	}
+	if db.Lessons == nil {
+		db.Lessons = []Lesson{}
+	}
+	if db.Constraints == nil {
+		db.Constraints = make(map[string]interface{})
+	}
 }

@@ -67,11 +67,10 @@ type RoomGroup struct {
 }
 
 type RoomChoiceGroup struct {
-	Id        Ref
-	Name      string
-	Tag       string `json:"Shortcut"`
-	Rooms     []Ref
-	Reference interface{}
+	Id    Ref
+	Name  string
+	Tag   string `json:"Shortcut"`
+	Rooms []Ref
 }
 
 type Class struct {
