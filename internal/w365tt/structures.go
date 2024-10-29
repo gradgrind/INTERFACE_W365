@@ -1,29 +1,32 @@
-package db
+package w365tt
 
-// The structures used for the "database"
+// The structures used for the "database", adapted to read from W365
 //TODO: Currently dealing only with the elements needed for the timetable
 
 type Ref string // Element reference
 
 type Info struct {
-	Institution        string
+	Institution        string `json:"SchoolName"`
 	FirstAfternoonHour int
 	MiddayBreak        []int
-	Reference          string
+	Reference          string `json:"Scenario"`
 }
 
 type Day struct {
 	Id   Ref
 	Name string
-	Tag  string
+	Tag  string `json:"Shortcut"`
 }
 
 type Hour struct {
 	Id    Ref
 	Name  string
-	Tag   string
+	Tag   string `json:"Shortcut"`
 	Start string
 	End   string
+	// These are for W365 only, optional, with default = False:
+	FirstAfternoonHour bool `json:",omitempty"`
+	MiddayBreak        bool `json:",omitempty"`
 }
 
 type TimeSlot struct {
@@ -34,9 +37,9 @@ type TimeSlot struct {
 type Teacher struct {
 	Id               Ref
 	Name             string
-	Tag              string
+	Tag              string `json:"Shortcut"`
 	Firstname        string
-	NotAvailable     []TimeSlot
+	NotAvailable     []TimeSlot `json:"Absences"`
 	MinLessonsPerDay int
 	MaxLessonsPerDay int
 	MaxDays          int
@@ -49,20 +52,20 @@ type Teacher struct {
 type Subject struct {
 	Id   Ref
 	Name string
-	Tag  string
+	Tag  string `json:"Shortcut"`
 }
 
 type Room struct {
 	Id           Ref
 	Name         string
-	Tag          string
-	NotAvailable []TimeSlot
+	Tag          string     `json:"Shortcut"`
+	NotAvailable []TimeSlot `json:"Absences"`
 }
 
 type RoomGroup struct {
 	Id    Ref
 	Name  string
-	Tag   string
+	Tag   string `json:"Shortcut"`
 	Rooms []Ref
 }
 
@@ -77,23 +80,23 @@ type RoomChoiceGroup struct {
 type Class struct {
 	Id               Ref
 	Name             string
-	Tag              string
-	Year             int
+	Tag              string `json:"Shortcut"`
+	Year             int    `json:"Level"`
 	Letter           string
-	NotAvailable     []TimeSlot
+	Absences         []TimeSlot
 	Divisions        []Division
-	MinLessonsPerDay int
-	MaxLessonsPerDay int
-	MaxGapsPerDay    int
-	MaxGapsPerWeek   int
-	MaxAfternoons    int
+	MinLessonsPerDay interface{} `json:",omitempty"`
+	MaxLessonsPerDay interface{} `json:",omitempty"`
+	MaxGapsPerDay    interface{} `json:",omitempty"`
+	MaxGapsPerWeek   interface{} `json:",omitempty"`
+	MaxAfternoons    interface{} `json:",omitempty"`
 	LunchBreak       bool
 	ForceFirstHour   bool
 }
 
 type Group struct {
 	Id  Ref
-	Tag string
+	Tag string `json:"Shortcut"`
 }
 
 type Division struct {
@@ -101,12 +104,23 @@ type Division struct {
 	Groups []Ref
 }
 
+/*
+type Division struct {
+	Id     Ref
+	Name   string
+	Groups []Ref
+}
+*/
+
 type Course struct {
-	Id       Ref
-	Subject  Ref
-	Groups   []Ref
-	Teachers []Ref
-	Room     Ref // Room, RoomGroup or RoomChoiceGroup Element
+	Id             Ref
+	Subjects       []Ref `json:",omitempty"`
+	Subject        Ref
+	Groups         []Ref
+	Teachers       []Ref
+	PreferredRooms []Ref `json:",omitempty"`
+	// Not in W365:
+	Room Ref // Room, RoomGroup or RoomChoiceGroup Element
 }
 
 type SuperCourse struct {
@@ -115,12 +129,15 @@ type SuperCourse struct {
 }
 
 type SubCourse struct {
-	Id          Ref
-	SuperCourse Ref
-	Subject     Ref
-	Groups      []Ref
-	Teachers    []Ref
-	Room        Ref // Room, RoomGroup or RoomChoiceGroup Element
+	Id             Ref
+	SuperCourse    Ref
+	Subjects       []Ref `json:",omitempty"`
+	Subject        Ref
+	Groups         []Ref
+	Teachers       []Ref
+	PreferredRooms []Ref `json:",omitempty"`
+	// Not in W365:
+	Room Ref // Room, RoomGroup or RoomChoiceGroup Element
 }
 
 type Lesson struct {
@@ -130,7 +147,7 @@ type Lesson struct {
 	Day      int
 	Hour     int
 	Fixed    bool
-	Rooms    []Ref // only Room Elements
+	Rooms    []Ref `json:"LocalRooms"` // only Room Elements
 }
 
 type DbTopLevel struct {
