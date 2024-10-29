@@ -3,14 +3,13 @@ package w365tt
 import (
 	"encoding/json"
 	"fmt"
-	"gradgrind/INTERFACE_W365/internal/db"
 	"io"
 	"log"
 	"os"
-	"strings"
 )
 
-func ReadJSON(jsonpath string) W365TopLevel {
+// Read to the local, tweaked DbTopLevel
+func ReadJSON(jsonpath string) DbTopLevel {
 	// Open the  JSON file
 	jsonFile, err := os.Open(jsonpath)
 	if err != nil {
@@ -21,7 +20,7 @@ func ReadJSON(jsonpath string) W365TopLevel {
 	// read the opened XML file as a byte array.
 	byteValue, _ := io.ReadAll(jsonFile)
 	log.Printf("*+ Reading: %s\n", jsonpath)
-	v := W365TopLevel{}
+	v := DbTopLevel{}
 	err = json.Unmarshal(byteValue, &v)
 	if err != nil {
 		log.Fatalf("Could not unmarshal json: %s\n", err)
@@ -37,58 +36,65 @@ func defaultMinus1(v interface{}) int {
 }
 
 type xData struct {
-	w365         W365TopLevel
-	data         db.DbTopLevel
-	dbi          db.DbRef // counter, for db indexes
-	teachers     map[W365Ref]db.DbRef
-	subjects     map[W365Ref]db.DbRef
-	subjectmap   map[W365Ref]string // Subject Tag (Shortcut)
-	rooms        map[W365Ref]db.DbRef
-	roomtag      map[db.DbRef]string // Room Tag (Shortcut)
-	roomgroups   map[W365Ref]db.DbRef
-	roomchoices  map[string]db.DbRef // New RoomChoiceGroup name -> db Id
-	pregroups    map[W365Ref]string
-	groups       map[W365Ref]db.DbRef
-	classes      map[W365Ref]db.DbRef
-	courses      map[W365Ref]db.DbRef
-	subcourses   map[W365Ref]db.DbRef
-	supercourses map[W365Ref]db.DbRef
-	newsubjects  map[string]db.DbRef // New Subject name -> db Id
+	data     DbTopLevel
+	dbi      int // counter, for new db references
+	elements map[Ref]interface{}
+
+	/*
+		teachers     map[Ref]db.DbRef
+		subjects     map[Ref]db.DbRef
+		subjectmap   map[Ref]string // Subject Tag (Shortcut)
+		rooms        map[Ref]db.DbRef
+		roomtag      map[db.DbRef]string // Room Tag (Shortcut)
+		roomgroups   map[Ref]db.DbRef
+		roomchoices  map[string]db.DbRef // New RoomChoiceGroup name -> db Id
+		pregroups    map[Ref]string
+		groups       map[Ref]db.DbRef
+		classes      map[Ref]db.DbRef
+		courses      map[Ref]db.DbRef
+		subcourses   map[Ref]db.DbRef
+		supercourses map[Ref]db.DbRef
+		newsubjects  map[string]db.DbRef // New Subject name -> db Id
+	*/
 }
 
-func LoadJSON(jsonpath string) db.DbTopLevel {
+func LoadJSON(jsonpath string) DbTopLevel {
 	dbdata := xData{
-		w365: ReadJSON(jsonpath),
-		data: db.DbTopLevel{},
-		dbi:  0,
+		data:     ReadJSON(jsonpath),
+		dbi:      0,
+		elements: make(map[Ref]interface{}),
 	}
 
-	dbdata.addInfo()
-	dbdata.addDays()
-	dbdata.addHours()
-	dbdata.addTeachers()
-	dbdata.addSubjects()
-	dbdata.addRooms()
-	dbdata.addRoomGroups()
-	// RoomChoicesGroups: W365 has none of these – they must be generated
-	// from the PreferredRooms lists of courses.
-	dbdata.roomchoices = map[string]db.DbRef{}
-	dbdata.data.RoomChoiceGroups = []db.RoomChoiceGroup{}
-	dbdata.addGroups()
-	dbdata.addClasses()
-	dbdata.addCourses()
-	dbdata.addCourses()
-	dbdata.addSuperCourses()
-	dbdata.addSubCourses()
-	dbdata.addLessons()
+	/*
+		dbdata.addInfo()
+		dbdata.addDays()
+		dbdata.addHours()
+		dbdata.addTeachers()
+		dbdata.addSubjects()
+		dbdata.addRooms()
+		dbdata.addRoomGroups()
+		// RoomChoicesGroups: W365 has none of these – they must be generated
+		// from the PreferredRooms lists of courses.
+		dbdata.roomchoices = map[string]db.DbRef{}
+		dbdata.data.RoomChoiceGroups = []db.RoomChoiceGroup{}
+		dbdata.addGroups()
+		dbdata.addClasses()
+		dbdata.addCourses()
+		dbdata.addCourses()
+		dbdata.addSuperCourses()
+		dbdata.addSubCourses()
+		dbdata.addLessons()
+	*/
+
 	return dbdata.data
 }
 
-func (dbdata *xData) nextId() db.DbRef {
+func (dbdata *xData) nextId() Ref {
 	dbdata.dbi++
-	return dbdata.dbi
+	return Ref(fmt.Sprintf("#%d", dbdata.dbi))
 }
 
+/*
 func (dbdata *xData) addInfo() {
 	dbdata.data.Info = db.Info{
 		Institution:        dbdata.w365.W365TT.SchoolName,
@@ -142,7 +148,7 @@ func (dbdata *xData) addHours() {
 
 func (dbdata *xData) addTeachers() {
 	dbdata.data.Teachers = []db.Teacher{}
-	dbdata.teachers = map[W365Ref]db.DbRef{}
+	dbdata.teachers = map[Ref]db.DbRef{}
 	for _, d := range dbdata.w365.Teachers {
 		a := d.Absences
 		if len(d.Absences) == 0 {
@@ -170,9 +176,9 @@ func (dbdata *xData) addTeachers() {
 
 func (dbdata *xData) addSubjects() {
 	dbdata.data.Subjects = []db.Subject{}
-	dbdata.subjects = map[W365Ref]db.DbRef{}
+	dbdata.subjects = map[Ref]db.DbRef{}
 	dbdata.newsubjects = map[string]db.DbRef{}
-	dbdata.subjectmap = map[W365Ref]string{}
+	dbdata.subjectmap = map[Ref]string{}
 	for _, d := range dbdata.w365.Subjects {
 		sr := dbdata.nextId()
 		dbdata.data.Subjects = append(dbdata.data.Subjects, db.Subject{
@@ -188,7 +194,7 @@ func (dbdata *xData) addSubjects() {
 
 func (dbdata *xData) addRooms() {
 	dbdata.data.Rooms = []db.Room{}
-	dbdata.rooms = map[W365Ref]db.DbRef{}
+	dbdata.rooms = map[Ref]db.DbRef{}
 	dbdata.roomtag = map[db.DbRef]string{}
 	for _, d := range dbdata.w365.Rooms {
 		a := d.Absences
@@ -210,7 +216,7 @@ func (dbdata *xData) addRooms() {
 
 func (dbdata *xData) addRoomGroups() {
 	dbdata.data.RoomGroups = []db.RoomGroup{}
-	dbdata.roomgroups = map[W365Ref]db.DbRef{}
+	dbdata.roomgroups = map[Ref]db.DbRef{}
 	for _, d := range dbdata.w365.RoomGroups {
 		rlist := []db.DbRef{}
 		for _, r := range d.Rooms {
@@ -239,8 +245,8 @@ func (dbdata *xData) addGroups() {
 	// To handle that, the data for the Groups is gathered here, but the
 	// Elements are only added to the database when the Divisions are read.
 	dbdata.data.Groups = []db.Group{}
-	dbdata.pregroups = map[W365Ref]string{}
-	dbdata.groups = map[W365Ref]db.DbRef{}
+	dbdata.pregroups = map[Ref]string{}
+	dbdata.groups = map[Ref]db.DbRef{}
 	for _, d := range dbdata.w365.Groups {
 		dbdata.pregroups[d.Id] = d.Shortcut
 	}
@@ -248,7 +254,7 @@ func (dbdata *xData) addGroups() {
 
 func (dbdata *xData) addClasses() {
 	dbdata.data.Classes = []db.Class{}
-	dbdata.classes = map[W365Ref]db.DbRef{}
+	dbdata.classes = map[Ref]db.DbRef{}
 	for _, d := range dbdata.w365.Classes {
 		a := d.Absences
 		if len(d.Absences) == 0 {
@@ -308,12 +314,12 @@ func (dbdata *xData) addClasses() {
 }
 
 func (dbdata *xData) readCourse(
-	id W365Ref,
-	subject W365Ref,
-	subjects []W365Ref,
-	groups []W365Ref,
-	teachers []W365Ref,
-	rooms []W365Ref,
+	id Ref,
+	subject Ref,
+	subjects []Ref,
+	groups []Ref,
+	teachers []Ref,
+	rooms []Ref,
 ) (db.DbRef, []db.DbRef, []db.DbRef, db.DbRef) {
 	// Deal with subject
 	var sr db.DbRef = 0
@@ -440,7 +446,7 @@ func (dbdata *xData) readCourse(
 
 func (dbdata *xData) addCourses() {
 	dbdata.data.Courses = []db.Course{}
-	dbdata.courses = map[W365Ref]db.DbRef{}
+	dbdata.courses = map[Ref]db.DbRef{}
 	for _, d := range dbdata.w365.Courses {
 		sr, glist, tlist, rm := dbdata.readCourse(
 			d.Id, d.Subject, d.Subjects, d.Groups, d.Teachers, d.PreferredRooms)
@@ -459,7 +465,7 @@ func (dbdata *xData) addCourses() {
 
 func (dbdata *xData) addSuperCourses() {
 	dbdata.data.SuperCourses = []db.SuperCourse{}
-	dbdata.supercourses = map[W365Ref]db.DbRef{}
+	dbdata.supercourses = map[Ref]db.DbRef{}
 	for _, d := range dbdata.w365.SuperCourses {
 		cr := dbdata.nextId()
 		sr, ok := dbdata.subjects[d.Subject]
@@ -479,7 +485,7 @@ func (dbdata *xData) addSuperCourses() {
 
 func (dbdata *xData) addSubCourses() {
 	dbdata.data.SubCourses = []db.SubCourse{}
-	dbdata.subcourses = map[W365Ref]db.DbRef{}
+	dbdata.subcourses = map[Ref]db.DbRef{}
 	for _, d := range dbdata.w365.SubCourses {
 		sr, glist, tlist, rm := dbdata.readCourse(
 			d.Id, d.Subject, d.Subjects, d.Groups, d.Teachers, d.PreferredRooms)
@@ -538,3 +544,4 @@ func (dbdata *xData) addLessons() {
 		})
 	}
 }
+*/

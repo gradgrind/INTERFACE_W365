@@ -39,13 +39,13 @@ type Teacher struct {
 	Name             string
 	Tag              string `json:"Shortcut"`
 	Firstname        string
-	NotAvailable     []TimeSlot `json:"Absences"`
-	MinLessonsPerDay int
-	MaxLessonsPerDay int
-	MaxDays          int
-	MaxGapsPerDay    int
-	MaxGapsPerWeek   int
-	MaxAfternoons    int
+	NotAvailable     []TimeSlot  `json:"Absences"`
+	MinLessonsPerDay interface{} `json:",omitempty"`
+	MaxLessonsPerDay interface{} `json:",omitempty"`
+	MaxDays          interface{} `json:",omitempty"`
+	MaxGapsPerDay    interface{} `json:",omitempty"`
+	MaxGapsPerWeek   interface{} `json:",omitempty"`
+	MaxAfternoons    interface{} `json:",omitempty"`
 	LunchBreak       bool
 }
 
@@ -151,7 +151,7 @@ type Lesson struct {
 }
 
 type DbTopLevel struct {
-	Info             Info
+	Info             Info `json:"W365TT"`
 	Days             []Day
 	Hours            []Hour
 	Teachers         []Teacher
