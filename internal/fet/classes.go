@@ -2,11 +2,6 @@ package fet
 
 import (
 	"encoding/xml"
-	"fmt"
-	"gradgrind/wztogo/internal/wzbase"
-	"log"
-	"strconv"
-	"strings"
 )
 
 const GROUP_SEP = ","
@@ -61,6 +56,8 @@ type studentsNotAvailable struct {
 	Active                        bool
 }
 
+/*TODO
+
 // Note that any class divisions with no actual lessons should not appear
 // in the atomic groups. This is handled before calling this function so
 // that wzdb.AtomicGroups covers only these "active" divisions.
@@ -68,11 +65,11 @@ func getClasses(fetinfo *fetInfo) {
 	//	trefs := wzdb.TableMap["CLASSES"]
 	items := []fetClass{}
 	natimes := []studentsNotAvailable{}
-	lunchperiods := fetinfo.wzdb.Schooldata["LUNCHBREAK"].([]int)
+	lunchperiods := fetinfo.db.Info.MiddayBreak
 	lunchconstraints := []lunchBreak{}
 	maxgaps := []maxGapsPerWeek{}
 	minlessons := []minLessonsPerDay{}
-	for _, c := range fetinfo.wzdb.TableMap["CLASSES"] {
+	for _, c := range fetinfo.db.Classes {
 		//    for _, ti := range trefs {
 		//		cl := wzdb.NodeList[wzdb.IndexMap[ti]].Node.(wzbase.Class)
 		cl := fetinfo.wzdb.GetNode(c).(wzbase.Class)
@@ -233,3 +230,4 @@ func getClasses(fetinfo *fetInfo) {
 	fetinfo.fetdata.Time_Constraints_List.
 		ConstraintStudentsSetMinHoursDaily = minlessons
 }
+*/

@@ -2,6 +2,7 @@
 package fet
 
 import (
+	"encoding/json"
 	"encoding/xml"
 	"fmt"
 	"gradgrind/INTERFACE_W365/internal/db"
@@ -50,6 +51,12 @@ type fetInfo struct {
 	days             []string
 	hours            []string
 	fetdata          fet
+	courses          map[db.DbRef]int
+	subcourses       map[db.DbRef]int
+	supercourses     map[db.DbRef]int
+	supersubs        map[db.DbRef][]db.DbRef
+	classdivisions   map[db.DbRef][][]db.DbRef
+	atomicgroups     map[db.DbRef][]AtomicGroup
 	fixed_activities []bool
 }
 
@@ -58,14 +65,12 @@ type timeConstraints struct {
 	//
 	ConstraintBasicCompulsoryTime basicTimeConstraint
 	//	ConstraintStudentsSetNotAvailableTimes []studentsNotAvailable
-	ConstraintTeacherNotAvailableTimes []teacherNotAvailable
-	/*
-		ConstraintActivityPreferredStartingTime      []startingTime
-		ConstraintMinDaysBetweenActivities           []minDaysBetweenActivities
-		ConstraintStudentsSetMaxHoursDailyInInterval []lunchBreak
-		ConstraintStudentsSetMaxGapsPerWeek          []maxGapsPerWeek
-		ConstraintStudentsSetMinHoursDaily           []minLessonsPerDay
-	*/
+	ConstraintTeacherNotAvailableTimes           []teacherNotAvailable
+	ConstraintActivityPreferredStartingTime      []startingTime
+	ConstraintMinDaysBetweenActivities           []minDaysBetweenActivities
+	ConstraintStudentsSetMaxHoursDailyInInterval []lunchBreak
+	ConstraintStudentsSetMaxGapsPerWeek          []maxGapsPerWeek
+	ConstraintStudentsSetMinHoursDaily           []minLessonsPerDay
 }
 
 type basicTimeConstraint struct {
@@ -133,7 +138,7 @@ func make_fet_file(dbdata *db.DbTopLevel,
 			Version:          fet_version,
 			Mode:             "Official",
 			Institution_Name: dbdata.Info.Institution,
-			Comments:         "Put a Source Reference here?",
+			Comments:         getString(dbdata.Info.Reference),
 			Time_Constraints_List: timeConstraints{
 				ConstraintBasicCompulsoryTime: basicTimeConstraint{
 					Weight_Percentage: 100, Active: true},
@@ -150,6 +155,8 @@ func make_fet_file(dbdata *db.DbTopLevel,
 	getTeachers(&fetinfo)
 	getSubjects(&fetinfo)
 	getRooms(&fetinfo)
+	readCourseIndexes(&fetinfo)
+	makeAtomicGroups(&fetinfo)
 	/*
 		getClasses(&fetinfo)
 		getActivities(&fetinfo, activities, course2activities)
@@ -157,4 +164,22 @@ func make_fet_file(dbdata *db.DbTopLevel,
 	*/
 
 	return xml.Header + makeXML(fetinfo.fetdata, 0)
+}
+
+func get_string(val interface{}) string {
+	s, ok := val.(string)
+	if !ok {
+		b, _ := json.Marshal(val)
+		s = string(b)
+	}
+	return strings.Trim(s, "\"")
+}
+
+func getString(val interface{}) string {
+	s, ok := val.(string)
+	if !ok {
+		b, _ := json.Marshal(val)
+		s = string(b)
+	}
+	return s
 }

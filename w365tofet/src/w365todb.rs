@@ -1,60 +1,152 @@
-package w365tt
+use crate::readw365;
+use crate::readw365::W365Ref;
+use crate::db;
+use crate::db::DbRef;
+use std::collections::BTreeMap;
+use serde_json::json;
 
-import (
-	"encoding/json"
-	"fmt"
-	"gradgrind/INTERFACE_W365/internal/db"
-	"io"
-	"log"
-	"os"
-	"strings"
-)
+type MapWDb = BTreeMap<W365Ref, DbRef>;
+type MapWStr = BTreeMap<W365Ref, String>;
+type MapStrDb = BTreeMap<String, DbRef>;
+type MapDbStr = BTreeMap<DbRef, String>;
 
-func ReadJSON(jsonpath string) W365TopLevel {
-	// Open the  JSON file
-	jsonFile, err := os.Open(jsonpath)
-	if err != nil {
-		log.Fatal(err)
-	}
-	// Remember to close the file at the end of the function
-	defer jsonFile.Close()
-	// read the opened XML file as a byte array.
-	byteValue, _ := io.ReadAll(jsonFile)
-	log.Printf("*+ Reading: %s\n", jsonpath)
-	v := W365TopLevel{}
-	err = json.Unmarshal(byteValue, &v)
-	if err != nil {
-		log.Fatalf("Could not unmarshal json: %s\n", err)
-	}
-	return v
+
+struct XData {
+	//w365:         readw365::W365TopLevel,
+	data:         db::DbTopLevel,
+	dbi:          DbRef, // counter, for db indexes
+	teachers:     MapWDb,
+	subjects:     MapWDb,
+	subjectmap:   MapWStr, // Subject Tag (Shortcut)
+	rooms:        MapWDb,
+	roomtag:      MapDbStr, // Room Tag (Shortcut)
+	roomgroups:   MapWDb,
+	roomchoices:  MapStrDb, // New RoomChoiceGroup name -> db Id
+	pregroups:    MapWStr,
+	groups:       MapWDb,
+	classes:      MapWDb,
+	courses:      MapWDb,
+	subcourses:   MapWDb,
+	supercourses: MapWDb,
+	newsubjects:  MapStrDb // New Subject name -> db Id
 }
 
-func defaultMinus1(v interface{}) int {
-	if v == nil {
-		return -1
-	}
-	return int(v.(float64))
+pub fn w365_db(w365data: readw365::W365TopLevel)
+        -> Result<db::DbTopLevel, String>
+{
+	let mut dbdata = XData{
+        //w365:           w365data,
+        data:           db::DbTopLevel::new(db::Info{
+            Institution:        w365data.W365TT.SchoolName.clone(),
+            FirstAfternoonHour: w365data.W365TT.FirstAfternoonHour,
+            MiddayBreak:        w365data.W365TT.MiddayBreak.clone(),
+            Reference:          json!(w365data.W365TT.Scenario)
+        }),
+        dbi:            0,
+        teachers:       BTreeMap::new(),
+        subjects:       BTreeMap::new(),
+        subjectmap:     BTreeMap::new(),
+        rooms:          BTreeMap::new(),
+        roomtag:        BTreeMap::new(),
+        roomgroups:     BTreeMap::new(),
+        roomchoices:    BTreeMap::new(),
+        pregroups:      BTreeMap::new(),
+        groups:         BTreeMap::new(),
+        classes:        BTreeMap::new(),
+        courses:        BTreeMap::new(),
+        subcourses:     BTreeMap::new(),
+        supercourses:   BTreeMap::new(),
+        newsubjects:    BTreeMap::new()
+    };
+
+	add_days(&mut dbdata, &w365data.Days);
+	add_hours(&mut dbdata, &w365data.Hours);
+	add_teachers(&mut dbdata, &w365data.Teachers);
+    Ok(dbdata.data)
 }
 
-type xData struct {
-	w365         W365TopLevel
-	data         db.DbTopLevel
-	dbi          db.DbRef // counter, for db indexes
-	teachers     map[W365Ref]db.DbRef
-	subjects     map[W365Ref]db.DbRef
-	subjectmap   map[W365Ref]string // Subject Tag (Shortcut)
-	rooms        map[W365Ref]db.DbRef
-	roomtag      map[db.DbRef]string // Room Tag (Shortcut)
-	roomgroups   map[W365Ref]db.DbRef
-	roomchoices  map[string]db.DbRef // New RoomChoiceGroup name -> db Id
-	pregroups    map[W365Ref]string
-	groups       map[W365Ref]db.DbRef
-	classes      map[W365Ref]db.DbRef
-	courses      map[W365Ref]db.DbRef
-	subcourses   map[W365Ref]db.DbRef
-	supercourses map[W365Ref]db.DbRef
-	newsubjects  map[string]db.DbRef // New Subject name -> db Id
+fn next_id(dbdata: &mut XData) -> DbRef {
+    dbdata.dbi += 1;
+    dbdata.dbi
 }
+
+fn add_days(dbdata: &mut XData, days: &Vec<readw365::Day>) {
+	for d in days.iter() {
+        let id = next_id(dbdata);
+		dbdata.data.Days.push(db::Day{
+			Id:        id,
+			Tag:       d.Shortcut.clone(),
+			Name:      d.Name.clone(),
+			Reference: json!(d.Id)
+		})
+	}
+}
+
+fn add_hours(dbdata: &mut XData, hours: &Vec<readw365::Hour>) {
+	let mdbok = dbdata.data.Info.MiddayBreak.is_empty();
+    let mut i = 0;
+	for d in hours.iter() {
+		if d.FirstAfternoonHour {
+			dbdata.data.Info.FirstAfternoonHour = i;
+		}
+		if d.MiddayBreak {
+			if mdbok {
+				dbdata.data.Info.MiddayBreak.push(i);
+			} else {
+				eprintln!("*ERROR* MiddayBreak set in Info AND Hours")
+			}
+		}
+        i += 1;
+		let id = next_id(dbdata);
+		dbdata.data.Hours.push(db::Hour{
+			Id:        id,
+			Tag:       if d.Shortcut.is_empty() {
+                format!("({})", i)
+            } else {
+                d.Shortcut.clone()
+            },
+			Name:      d.Name.clone(),
+			Start:     d.Start.clone(),
+			End:       d.End.clone(),
+			Reference: json!(d.Id)
+		})
+	}
+}
+
+fn clone_absences(alist: &Vec<db::TimeSlot>) -> Vec<db::TimeSlot> {
+    let mut a: Vec<db::TimeSlot> = Vec::new();
+    if !alist.is_empty() {
+        for t in alist.iter() {
+            a.push(db::TimeSlot{Day: t.Day, Hour: t.Hour});
+        }
+    }
+    a
+}
+
+fn add_teachers(dbdata: &mut XData, teachers: &Vec<readw365::Teacher>) {
+	for d in teachers.iter() {
+		let id = next_id(dbdata);
+		dbdata.data.Teachers.push(db::Teacher{
+			Id:                 id,
+            Tag:                d.Shortcut.clone(),
+			Name:               d.Name.clone(),
+			Firstname:          d.Firstname.clone(),
+			NotAvailable:       clone_absences(&d.Absences),
+			MinLessonsPerDay:   d.MinLessonsPerDay,
+			MaxLessonsPerDay:   d.MaxLessonsPerDay,
+			MaxDays:            d.MaxDays,
+			MaxGapsPerDay:      d.MaxGapsPerDay,
+			MaxGapsPerWeek:     d.MaxGapsPerWeek,
+			MaxAfternoons:      d.MaxAfternoons,
+			LunchBreak:         d.LunchBreak,
+			Reference:          json!(d.Id)
+		});
+		dbdata.teachers.insert(d.Id.clone(), id);
+	}
+}
+
+
+/*
 
 func LoadJSON(jsonpath string) db.DbTopLevel {
 	dbdata := xData{
@@ -72,7 +164,7 @@ func LoadJSON(jsonpath string) db.DbTopLevel {
 	dbdata.addRoomGroups()
 	// RoomChoicesGroups: W365 has none of these – they must be generated
 	// from the PreferredRooms lists of courses.
-	dbdata.roomchoices = map[string]db.DbRef{}
+	dbdata.roomchoices = MapStrDb{}
 	dbdata.data.RoomChoiceGroups = []db.RoomChoiceGroup{}
 	dbdata.addGroups()
 	dbdata.addClasses()
@@ -84,95 +176,11 @@ func LoadJSON(jsonpath string) db.DbTopLevel {
 	return dbdata.data
 }
 
-func (dbdata *xData) nextId() db.DbRef {
-	dbdata.dbi++
-	return dbdata.dbi
-}
-
-func (dbdata *xData) addInfo() {
-	dbdata.data.Info = db.Info{
-		Institution:        dbdata.w365.W365TT.SchoolName,
-		Reference:          string(dbdata.w365.W365TT.Scenario),
-		FirstAfternoonHour: dbdata.w365.W365TT.FirstAfternoonHour,
-		MiddayBreak:        dbdata.w365.W365TT.MiddayBreak,
-	}
-}
-
-func (dbdata *xData) addDays() {
-	dbdata.data.Days = []db.Day{}
-	for _, d := range dbdata.w365.Days {
-		dbdata.data.Days = append(dbdata.data.Days, db.Day{
-			Id:        dbdata.nextId(),
-			Tag:       d.Shortcut,
-			Name:      d.Name,
-			Reference: string(d.Id),
-		})
-	}
-}
-
-func (dbdata *xData) addHours() {
-	dbdata.data.Hours = []db.Hour{}
-	mdbok := len(dbdata.data.Info.MiddayBreak) == 0
-	for i, d := range dbdata.w365.Hours {
-		if d.FirstAfternoonHour {
-			dbdata.data.Info.FirstAfternoonHour = i
-		}
-		if d.MiddayBreak {
-			if mdbok {
-				dbdata.data.Info.MiddayBreak = append(
-					dbdata.data.Info.MiddayBreak, i)
-			} else {
-				fmt.Printf("*ERROR* MiddayBreak set in Info AND Hours\n")
-			}
-		}
-		tag := d.Shortcut
-		if tag == "" {
-			tag = fmt.Sprintf("(%d)", i+1)
-		}
-		dbdata.data.Hours = append(dbdata.data.Hours, db.Hour{
-			Id:        dbdata.nextId(),
-			Tag:       tag,
-			Name:      d.Name,
-			Start:     d.Start,
-			End:       d.End,
-			Reference: string(d.Id),
-		})
-	}
-}
-
-func (dbdata *xData) addTeachers() {
-	dbdata.data.Teachers = []db.Teacher{}
-	dbdata.teachers = map[W365Ref]db.DbRef{}
-	for _, d := range dbdata.w365.Teachers {
-		a := d.Absences
-		if len(d.Absences) == 0 {
-			a = []db.TimeSlot{}
-		}
-		tr := dbdata.nextId()
-		dbdata.data.Teachers = append(dbdata.data.Teachers, db.Teacher{
-			Id:               tr,
-			Tag:              d.Shortcut,
-			Name:             d.Name,
-			Firstname:        d.Firstname,
-			NotAvailable:     a,
-			MinLessonsPerDay: defaultMinus1(d.MinLessonsPerDay),
-			MaxLessonsPerDay: defaultMinus1(d.MaxLessonsPerDay),
-			MaxDays:          defaultMinus1(d.MaxDays),
-			MaxGapsPerDay:    defaultMinus1(d.MaxGapsPerDay),
-			MaxGapsPerWeek:   defaultMinus1(d.MaxGapsPerWeek),
-			MaxAfternoons:    defaultMinus1(d.MaxAfternoons),
-			LunchBreak:       d.LunchBreak,
-			Reference:        string(d.Id),
-		})
-		dbdata.teachers[d.Id] = tr
-	}
-}
-
 func (dbdata *xData) addSubjects() {
 	dbdata.data.Subjects = []db.Subject{}
-	dbdata.subjects = map[W365Ref]db.DbRef{}
-	dbdata.newsubjects = map[string]db.DbRef{}
-	dbdata.subjectmap = map[W365Ref]string{}
+	dbdata.subjects = MapWDb{}
+	dbdata.newsubjects = MapStrDb{}
+	dbdata.subjectmap = MapWStr{}
 	for _, d := range dbdata.w365.Subjects {
 		sr := dbdata.nextId()
 		dbdata.data.Subjects = append(dbdata.data.Subjects, db.Subject{
@@ -188,8 +196,8 @@ func (dbdata *xData) addSubjects() {
 
 func (dbdata *xData) addRooms() {
 	dbdata.data.Rooms = []db.Room{}
-	dbdata.rooms = map[W365Ref]db.DbRef{}
-	dbdata.roomtag = map[db.DbRef]string{}
+	dbdata.rooms = MapWDb{}
+	dbdata.roomtag = MapDbStr{}
 	for _, d := range dbdata.w365.Rooms {
 		a := d.Absences
 		if len(d.Absences) == 0 {
@@ -210,9 +218,9 @@ func (dbdata *xData) addRooms() {
 
 func (dbdata *xData) addRoomGroups() {
 	dbdata.data.RoomGroups = []db.RoomGroup{}
-	dbdata.roomgroups = map[W365Ref]db.DbRef{}
+	dbdata.roomgroups = MapWDb{}
 	for _, d := range dbdata.w365.RoomGroups {
-		rlist := []db.DbRef{}
+		rlist := []DbRef{}
 		for _, r := range d.Rooms {
 			rr, ok := dbdata.rooms[r]
 			if !ok {
@@ -239,8 +247,8 @@ func (dbdata *xData) addGroups() {
 	// To handle that, the data for the Groups is gathered here, but the
 	// Elements are only added to the database when the Divisions are read.
 	dbdata.data.Groups = []db.Group{}
-	dbdata.pregroups = map[W365Ref]string{}
-	dbdata.groups = map[W365Ref]db.DbRef{}
+	dbdata.pregroups = MapWStr{}
+	dbdata.groups = MapWDb{}
 	for _, d := range dbdata.w365.Groups {
 		dbdata.pregroups[d.Id] = d.Shortcut
 	}
@@ -248,7 +256,7 @@ func (dbdata *xData) addGroups() {
 
 func (dbdata *xData) addClasses() {
 	dbdata.data.Classes = []db.Class{}
-	dbdata.classes = map[W365Ref]db.DbRef{}
+	dbdata.classes = MapWDb{}
 	for _, d := range dbdata.w365.Classes {
 		a := d.Absences
 		if len(d.Absences) == 0 {
@@ -257,7 +265,7 @@ func (dbdata *xData) addClasses() {
 		// Get the divisions and add their groups to the database.
 		divs := []db.Division{}
 		for _, wdiv := range d.Divisions {
-			glist := []db.DbRef{}
+			glist := []DbRef{}
 			for _, g := range wdiv.Groups {
 				gtag, ok := dbdata.pregroups[g] // get Tag
 				if ok {
@@ -314,9 +322,9 @@ func (dbdata *xData) readCourse(
 	groups []W365Ref,
 	teachers []W365Ref,
 	rooms []W365Ref,
-) (db.DbRef, []db.DbRef, []db.DbRef, db.DbRef) {
+) (DbRef, []DbRef, []DbRef, DbRef) {
 	// Deal with subject
-	var sr db.DbRef = 0
+	var sr DbRef = 0
 	var ok bool
 	msg := "*ERROR* Course %s:\n  Unknown Subject: %s\n"
 	if subject == "" {
@@ -363,7 +371,7 @@ func (dbdata *xData) readCourse(
 		}
 	}
 	// Deal with groups
-	glist := []db.DbRef{}
+	glist := []DbRef{}
 	for _, g := range groups {
 		gr, ok := dbdata.groups[g]
 		// gr can refer to a Group or a Class.
@@ -378,7 +386,7 @@ func (dbdata *xData) readCourse(
 		glist = append(glist, gr)
 	}
 	// Deal with teachers
-	tlist := []db.DbRef{}
+	tlist := []DbRef{}
 	for _, t := range teachers {
 		tr, ok := dbdata.teachers[t]
 		if !ok {
@@ -388,8 +396,8 @@ func (dbdata *xData) readCourse(
 		tlist = append(tlist, tr)
 	}
 	// Deal with rooms. W365 can have a single RoomGroup or a list of Rooms
-	rclist := []db.DbRef{} // choice list
-	var rm db.DbRef        // actual "room"
+	rclist := []DbRef{} // choice list
+	var rm DbRef        // actual "room"
 	for _, r := range rooms {
 		rr, ok := dbdata.rooms[r]
 		if ok {
@@ -398,7 +406,7 @@ func (dbdata *xData) readCourse(
 			rm, ok = dbdata.roomgroups[r]
 			if ok {
 				if len(rooms) != 1 {
-					rclist = []db.DbRef{}
+					rclist = []DbRef{}
 					fmt.Printf(
 						"*ERROR* Mixed Rooms and RoomGroups in Course %s\n", id)
 				}
@@ -440,7 +448,7 @@ func (dbdata *xData) readCourse(
 
 func (dbdata *xData) addCourses() {
 	dbdata.data.Courses = []db.Course{}
-	dbdata.courses = map[W365Ref]db.DbRef{}
+	dbdata.courses = MapWDb{}
 	for _, d := range dbdata.w365.Courses {
 		sr, glist, tlist, rm := dbdata.readCourse(
 			d.Id, d.Subject, d.Subjects, d.Groups, d.Teachers, d.PreferredRooms)
@@ -459,7 +467,7 @@ func (dbdata *xData) addCourses() {
 
 func (dbdata *xData) addSuperCourses() {
 	dbdata.data.SuperCourses = []db.SuperCourse{}
-	dbdata.supercourses = map[W365Ref]db.DbRef{}
+	dbdata.supercourses = MapWDb{}
 	for _, d := range dbdata.w365.SuperCourses {
 		cr := dbdata.nextId()
 		sr, ok := dbdata.subjects[d.Subject]
@@ -479,7 +487,7 @@ func (dbdata *xData) addSuperCourses() {
 
 func (dbdata *xData) addSubCourses() {
 	dbdata.data.SubCourses = []db.SubCourse{}
-	dbdata.subcourses = map[W365Ref]db.DbRef{}
+	dbdata.subcourses = MapWDb{}
 	for _, d := range dbdata.w365.SubCourses {
 		sr, glist, tlist, rm := dbdata.readCourse(
 			d.Id, d.Subject, d.Subjects, d.Groups, d.Teachers, d.PreferredRooms)
@@ -516,7 +524,7 @@ func (dbdata *xData) addLessons() {
 				continue
 			}
 		}
-		rlist := []db.DbRef{}
+		rlist := []DbRef{}
 		for _, r := range d.LocalRooms {
 			rr, ok := dbdata.rooms[r]
 			if ok {
@@ -538,3 +546,4 @@ func (dbdata *xData) addLessons() {
 		})
 	}
 }
+*/

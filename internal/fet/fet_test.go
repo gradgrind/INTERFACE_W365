@@ -1,6 +1,8 @@
 package fet
 
 import (
+	"encoding/json"
+	"fmt"
 	"gradgrind/INTERFACE_W365/internal/w365tt"
 	"log"
 	"os"
@@ -12,6 +14,22 @@ import (
 //func TestDays(t *testing.T) {
 //	readDays()
 //}
+
+func TestX(t *testing.T) {
+	var i interface{}
+	i = "Hello"
+	fmt.Printf(" --- %#v\n", getString(i))
+	i = 4.5
+	fmt.Printf(" --- %#v\n", getString(i))
+	j := []byte("{\"a\": 1, \"b\": \"Goodbye\"}")
+	json.Unmarshal(j, &i)
+	fmt.Printf(" +++ %#v\n", i)
+	fmt.Printf(" --- %#v\n", getString(i))
+	i = w365tt.W365Ref("XXX1")
+	fmt.Printf(" +++ %#v\n", i)
+	fmt.Printf(" --- %#v\n", getString(i))
+	panic("#BUG#")
+}
 
 func TestFet(t *testing.T) {
 	// w365file := "../_testdata/fms.w365"

@@ -2,7 +2,6 @@ package fet
 
 import (
 	"encoding/xml"
-	"gradgrind/wztogo/internal/wzbase"
 	"log"
 )
 
@@ -26,8 +25,9 @@ type minDaysBetweenActivities struct {
 	Active                  bool
 }
 
+/* TODO
 func gap_subject_activities(fetinfo *fetInfo,
-	subject_activities []wzbase.SubjectGroupActivities,
+	subject_activities []SubjectGroupActivities,
 ) {
 	gsalist := []minDaysBetweenActivities{}
 	for _, sga := range subject_activities {
@@ -54,8 +54,11 @@ func gap_subject_activities(fetinfo *fetInfo,
 			Active:                  true,
 		})
 	}
-	fetinfo.fetdata.Time_Constraints_List.ConstraintMinDaysBetweenActivities = gsalist
+	// TODO
+	//
+	//	fetinfo.fetdata.Time_Constraints_List.ConstraintMinDaysBetweenActivities = gsalist
 }
+*/
 
 type lunchBreak struct {
 	XMLName             xml.Name `xml:"ConstraintStudentsSetMaxHoursDailyInInterval"`
