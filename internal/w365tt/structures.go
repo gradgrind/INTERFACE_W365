@@ -39,13 +39,13 @@ type Teacher struct {
 	Name             string
 	Tag              string `json:"Shortcut"`
 	Firstname        string
-	NotAvailable     []TimeSlot  `json:"Absences"`
-	MinLessonsPerDay interface{} `json:",omitempty"`
-	MaxLessonsPerDay interface{} `json:",omitempty"`
-	MaxDays          interface{} `json:",omitempty"`
-	MaxGapsPerDay    interface{} `json:",omitempty"`
-	MaxGapsPerWeek   interface{} `json:",omitempty"`
-	MaxAfternoons    interface{} `json:",omitempty"`
+	NotAvailable     []TimeSlot `json:"Absences"`
+	MinLessonsPerDay interface{}
+	MaxLessonsPerDay interface{}
+	MaxDays          interface{}
+	MaxGapsPerDay    interface{}
+	MaxGapsPerWeek   interface{}
+	MaxAfternoons    interface{}
 	LunchBreak       bool
 }
 
@@ -85,11 +85,11 @@ type Class struct {
 	Letter           string
 	Absences         []TimeSlot
 	Divisions        []Division
-	MinLessonsPerDay interface{} `json:",omitempty"`
-	MaxLessonsPerDay interface{} `json:",omitempty"`
-	MaxGapsPerDay    interface{} `json:",omitempty"`
-	MaxGapsPerWeek   interface{} `json:",omitempty"`
-	MaxAfternoons    interface{} `json:",omitempty"`
+	MinLessonsPerDay interface{}
+	MaxLessonsPerDay interface{}
+	MaxGapsPerDay    interface{}
+	MaxGapsPerWeek   interface{}
+	MaxAfternoons    interface{}
 	LunchBreak       bool
 	ForceFirstHour   bool
 }

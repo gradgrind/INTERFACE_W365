@@ -6,6 +6,9 @@ import (
 	"io"
 	"log"
 	"os"
+	"slices"
+	"strconv"
+	"strings"
 )
 
 // Read to the local, tweaked DbTopLevel
@@ -28,11 +31,10 @@ func ReadJSON(jsonpath string) DbTopLevel {
 	return v
 }
 
-func defaultMinus1(v interface{}) int {
-	if v == nil {
-		return -1
+func defaultMinus1(v *interface{}) {
+	if (*v) == nil {
+		*v = -1
 	}
-	return int(v.(float64))
 }
 
 type xData struct {
@@ -64,14 +66,18 @@ func LoadJSON(jsonpath string) DbTopLevel {
 		dbi:      0,
 		elements: make(map[Ref]interface{}),
 	}
+	for i, n := range dbdata.data.Days {
+		dbdata.elements[n.Id] = &dbdata.data.Days[i]
+	}
+	dbdata.readHours()
+	dbdata.readTeachers()
+	for i, n := range dbdata.data.Subjects {
+		dbdata.elements[n.Id] = &dbdata.data.Subjects[i]
+	}
+	dbdata.readRooms()
+	dbdata.readRoomGroups()
 
 	/*
-		dbdata.addInfo()
-		dbdata.addDays()
-		dbdata.addHours()
-		dbdata.addTeachers()
-		dbdata.addSubjects()
-		dbdata.addRooms()
 		dbdata.addRoomGroups()
 		// RoomChoicesGroups: W365 has none of these – they must be generated
 		// from the PreferredRooms lists of courses.
@@ -94,151 +100,116 @@ func (dbdata *xData) nextId() Ref {
 	return Ref(fmt.Sprintf("#%d", dbdata.dbi))
 }
 
-/*
-func (dbdata *xData) addInfo() {
-	dbdata.data.Info = db.Info{
-		Institution:        dbdata.w365.W365TT.SchoolName,
-		Reference:          string(dbdata.w365.W365TT.Scenario),
-		FirstAfternoonHour: dbdata.w365.W365TT.FirstAfternoonHour,
-		MiddayBreak:        dbdata.w365.W365TT.MiddayBreak,
-	}
-}
-
-func (dbdata *xData) addDays() {
-	dbdata.data.Days = []db.Day{}
-	for _, d := range dbdata.w365.Days {
-		dbdata.data.Days = append(dbdata.data.Days, db.Day{
-			Id:        dbdata.nextId(),
-			Tag:       d.Shortcut,
-			Name:      d.Name,
-			Reference: string(d.Id),
-		})
-	}
-}
-
-func (dbdata *xData) addHours() {
-	dbdata.data.Hours = []db.Hour{}
+func (dbdata *xData) readHours() {
 	mdbok := len(dbdata.data.Info.MiddayBreak) == 0
-	for i, d := range dbdata.w365.Hours {
-		if d.FirstAfternoonHour {
+	for i := 0; i < len(dbdata.data.Hours); i++ {
+		n := &dbdata.data.Hours[i]
+		dbdata.elements[n.Id] = n
+		if n.FirstAfternoonHour {
 			dbdata.data.Info.FirstAfternoonHour = i
+			n.FirstAfternoonHour = false
 		}
-		if d.MiddayBreak {
+		if n.MiddayBreak {
 			if mdbok {
 				dbdata.data.Info.MiddayBreak = append(
 					dbdata.data.Info.MiddayBreak, i)
 			} else {
 				fmt.Printf("*ERROR* MiddayBreak set in Info AND Hours\n")
 			}
+			n.MiddayBreak = false
 		}
-		tag := d.Shortcut
-		if tag == "" {
-			tag = fmt.Sprintf("(%d)", i+1)
+		if n.Tag == "" {
+			n.Tag = fmt.Sprintf("(%d)", i+1)
 		}
-		dbdata.data.Hours = append(dbdata.data.Hours, db.Hour{
-			Id:        dbdata.nextId(),
-			Tag:       tag,
-			Name:      d.Name,
-			Start:     d.Start,
-			End:       d.End,
-			Reference: string(d.Id),
-		})
 	}
 }
 
-func (dbdata *xData) addTeachers() {
-	dbdata.data.Teachers = []db.Teacher{}
-	dbdata.teachers = map[Ref]db.DbRef{}
-	for _, d := range dbdata.w365.Teachers {
-		a := d.Absences
-		if len(d.Absences) == 0 {
-			a = []db.TimeSlot{}
+func (dbdata *xData) readTeachers() {
+	for i := 0; i < len(dbdata.data.Teachers); i++ {
+		n := &dbdata.data.Teachers[i]
+		dbdata.elements[n.Id] = n
+		if len(n.NotAvailable) == 0 {
+			// Avoid a null value
+			n.NotAvailable = []TimeSlot{}
 		}
-		tr := dbdata.nextId()
-		dbdata.data.Teachers = append(dbdata.data.Teachers, db.Teacher{
-			Id:               tr,
-			Tag:              d.Shortcut,
-			Name:             d.Name,
-			Firstname:        d.Firstname,
-			NotAvailable:     a,
-			MinLessonsPerDay: defaultMinus1(d.MinLessonsPerDay),
-			MaxLessonsPerDay: defaultMinus1(d.MaxLessonsPerDay),
-			MaxDays:          defaultMinus1(d.MaxDays),
-			MaxGapsPerDay:    defaultMinus1(d.MaxGapsPerDay),
-			MaxGapsPerWeek:   defaultMinus1(d.MaxGapsPerWeek),
-			MaxAfternoons:    defaultMinus1(d.MaxAfternoons),
-			LunchBreak:       d.LunchBreak,
-			Reference:        string(d.Id),
-		})
-		dbdata.teachers[d.Id] = tr
-	}
-}
-
-func (dbdata *xData) addSubjects() {
-	dbdata.data.Subjects = []db.Subject{}
-	dbdata.subjects = map[Ref]db.DbRef{}
-	dbdata.newsubjects = map[string]db.DbRef{}
-	dbdata.subjectmap = map[Ref]string{}
-	for _, d := range dbdata.w365.Subjects {
-		sr := dbdata.nextId()
-		dbdata.data.Subjects = append(dbdata.data.Subjects, db.Subject{
-			Id:        sr,
-			Tag:       d.Shortcut,
-			Name:      d.Name,
-			Reference: string(d.Id),
-		})
-		dbdata.subjects[d.Id] = sr
-		dbdata.subjectmap[d.Id] = d.Shortcut
-	}
-}
-
-func (dbdata *xData) addRooms() {
-	dbdata.data.Rooms = []db.Room{}
-	dbdata.rooms = map[Ref]db.DbRef{}
-	dbdata.roomtag = map[db.DbRef]string{}
-	for _, d := range dbdata.w365.Rooms {
-		a := d.Absences
-		if len(d.Absences) == 0 {
-			a = []db.TimeSlot{}
+		if n.MinLessonsPerDay == nil {
+			n.MinLessonsPerDay = -1
 		}
-		rr := dbdata.nextId()
-		dbdata.data.Rooms = append(dbdata.data.Rooms, db.Room{
-			Id:           rr,
-			Tag:          d.Shortcut,
-			Name:         d.Name,
-			NotAvailable: a,
-			Reference:    string(d.Id),
-		})
-		dbdata.rooms[d.Id] = rr
-		dbdata.roomtag[rr] = d.Shortcut
+		if n.MaxLessonsPerDay == nil {
+			n.MaxLessonsPerDay = -1
+		}
+		if n.MaxGapsPerDay == nil {
+			n.MaxGapsPerDay = -1
+		}
+		if n.MaxGapsPerWeek == nil {
+			n.MaxGapsPerWeek = -1
+		}
+		if n.MaxDays == nil {
+			n.MaxDays = -1
+		}
+		if n.MaxAfternoons == nil {
+			n.MaxAfternoons = -1
+		}
 	}
 }
 
-func (dbdata *xData) addRoomGroups() {
-	dbdata.data.RoomGroups = []db.RoomGroup{}
-	dbdata.roomgroups = map[Ref]db.DbRef{}
-	for _, d := range dbdata.w365.RoomGroups {
-		rlist := []db.DbRef{}
-		for _, r := range d.Rooms {
-			rr, ok := dbdata.rooms[r]
-			if !ok {
-				fmt.Printf("*ERROR* Unknown Room in RoomGroup %s:\n  %s\n",
-					d.Id, r)
-				continue
+func (dbdata *xData) readRooms() {
+	for i := 0; i < len(dbdata.data.Rooms); i++ {
+		n := &dbdata.data.Rooms[i]
+		dbdata.elements[n.Id] = n
+		if len(n.NotAvailable) == 0 {
+			// Avoid a null value
+			n.NotAvailable = []TimeSlot{}
+		}
+	}
+}
+
+func (dbdata *xData) readRoomGroups() {
+	tags := map[string]bool{}
+	tagless := []*RoomGroup{}
+	for i := 0; i < len(dbdata.data.RoomGroups); i++ {
+		n := &dbdata.data.RoomGroups[i]
+		dbdata.elements[n.Id] = n
+
+		n.Rooms = slices.DeleteFunc(n.Rooms, func(r Ref) bool {
+			if rm, ok := dbdata.elements[r]; ok {
+				if _, ok := rm.(*Room); ok {
+					return false
+				}
 			}
-			rlist = append(rlist, rr)
-		}
-		rr := dbdata.nextId()
-		dbdata.data.RoomGroups = append(dbdata.data.RoomGroups, db.RoomGroup{
-			Id:        rr,
-			Tag:       d.Shortcut,
-			Name:      d.Name,
-			Reference: string(d.Id),
-			Rooms:     rlist,
+			fmt.Printf("*ERROR* Unknown Room in RoomGroup %s:\n  %s\n",
+				n.Tag, r)
+			return true
 		})
-		dbdata.roomgroups[d.Id] = rr
+
+		if n.Tag == "" {
+			tagless = append(tagless, n)
+		} else {
+			tags[n.Tag] = true
+		}
+	}
+	for _, n := range tagless {
+		rlist := []string{}
+		for _, r := range n.Rooms {
+			rlist = append(rlist, dbdata.elements[r].(*Room).Tag)
+		}
+		tag := fmt.Sprintf("{%s}", strings.Join(rlist, ","))
+		i := 1
+		if tags[tag] {
+			for {
+				ti := tag + strconv.Itoa(i)
+				if !tags[ti] {
+					tag = ti
+					break
+				}
+				i++
+			}
+		}
+		n.Tag = tag
 	}
 }
+
+/*
 
 func (dbdata *xData) addGroups() {
 	// Every Group must be within one – and only one – Class Division.
