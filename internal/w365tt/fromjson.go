@@ -34,31 +34,6 @@ func defaultMinus1(v *interface{}) {
 	}
 }
 
-type xData struct {
-	data         DbTopLevel
-	dbi          int // counter, for new db references
-	elements     map[Ref]interface{}
-	subjecttags  map[string]Ref
-	subjectnames map[string]string
-
-	/*
-		teachers     map[Ref]db.DbRef
-		subjects     map[Ref]db.DbRef
-		subjectmap   map[Ref]string // Subject Tag (Shortcut)
-		rooms        map[Ref]db.DbRef
-		roomtag      map[db.DbRef]string // Room Tag (Shortcut)
-		roomgroups   map[Ref]db.DbRef
-		roomchoices  map[string]db.DbRef // New RoomChoiceGroup name -> db Id
-		pregroups    map[Ref]string
-		groups       map[Ref]db.DbRef
-		classes      map[Ref]db.DbRef
-		courses      map[Ref]db.DbRef
-		subcourses   map[Ref]db.DbRef
-		supercourses map[Ref]db.DbRef
-		newsubjects  map[string]db.DbRef // New Subject name -> db Id
-	*/
-}
-
 func LoadJSON(jsonpath string) *DbTopLevel {
 	dbdata := ReadJSON(jsonpath)
 	dbdata.checkDb()
