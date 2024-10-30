@@ -46,7 +46,11 @@ func LoadJSON(jsonpath string) *DbTopLevel {
 	dbdata.readRoomChoiceGroups()
 	// W365 has no RoomChoicesGroups: – they must be generated from the
 	// PreferredRooms lists of courses.
+	// To manage potentially incomplete Tag and Name fields for RoomGroups
+	// from W365, perform the checking after all room types have been "read".
+	dbdata.checkRoomGroups()
 	dbdata.readClasses()
+	dbdata.readCourses()
 
 	/*
 

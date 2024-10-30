@@ -1,8 +1,6 @@
 package w365tt
 
 import (
-	"fmt"
-	"gradgrind/INTERFACE_W365/internal/db"
 	"log"
 	"strconv"
 	"strings"
@@ -39,19 +37,6 @@ func (dbp *DbTopLevel) newSubject() string {
 	}
 }
 
-func (dbp *DbTopLevel) newRoomChoice() string {
-	// A rather primitive new-roomchoice-tag generator
-	i := 0
-	for {
-		i++
-		tag := "[" + strconv.Itoa(i) + "]"
-		_, nok := dbp.RoomChoiceTags[tag]
-		if !nok {
-			return tag
-		}
-	}
-}
-
 func (dbp *DbTopLevel) readCourses() {
 	for i := 0; i < len(dbp.Courses); i++ {
 		n := &dbp.Courses[i]
@@ -61,10 +46,9 @@ func (dbp *DbTopLevel) readCourses() {
 	}
 }
 
-func (dbp *DbTopLevel) readCourse(course *Course) {
-	// Deal with subject
+func (dbp *DbTopLevel) checkCourseSubject(course *Course) {
+	// Deal with the subject(s) fields
 	//	var sr Ref = 0
-	var ok bool
 	msg1 := "*ERROR* Course %s:\n  Unknown Subject: %s\n"
 	msg2 := "*ERROR* Course %s:\n  Not a Subject: %s\n"
 	if course.Subject == "" {
@@ -74,7 +58,7 @@ func (dbp *DbTopLevel) readCourse(course *Course) {
 			if !ok {
 				log.Fatalf(msg1, course.Id, wsid)
 			}
-			if _, ok = s0.(Subject); !ok {
+			if _, ok = s0.(*Subject); !ok {
 				log.Fatalf(msg2, course.Id, wsid)
 			}
 		} else if len(course.Subjects) > 1 {
@@ -84,7 +68,7 @@ func (dbp *DbTopLevel) readCourse(course *Course) {
 				// Need Tag/Shortcut field
 				s0, ok := dbp.Elements[wsid]
 				if ok {
-					s, ok := s0.(Subject)
+					s, ok := s0.(*Subject)
 					if !ok {
 						log.Fatalf(msg2, course.Id, wsid)
 					}
@@ -124,7 +108,7 @@ func (dbp *DbTopLevel) readCourse(course *Course) {
 		wsid := course.Subject
 		s0, ok := dbp.Elements[wsid]
 		if ok {
-			_, ok = s0.(Subject)
+			_, ok = s0.(*Subject)
 			if !ok {
 				log.Fatalf(msg2, course.Id, wsid)
 			}
@@ -132,7 +116,10 @@ func (dbp *DbTopLevel) readCourse(course *Course) {
 			log.Fatalf(msg1, course.Id, wsid)
 		}
 	}
+}
 
+func (dbp *DbTopLevel) readCourse(course *Course) {
+	dbp.checkCourseSubject(course)
 	// Deal with groups
 	//glist := []Ref{}
 	for _, gref := range course.Groups {
@@ -143,10 +130,10 @@ func (dbp *DbTopLevel) readCourse(course *Course) {
 			//continue
 		}
 		// g can be a Group or a Class.
-		_, ok = g.(Group)
+		_, ok = g.(*Group)
 		if !ok {
 			// Check for class.
-			_, ok = g.(Class)
+			_, ok = g.(*Class)
 			if !ok {
 				log.Fatalf("*ERROR* Invalid group in Course %s:\n  %s\n",
 					course.Id, gref)
@@ -164,7 +151,7 @@ func (dbp *DbTopLevel) readCourse(course *Course) {
 				course.Id, tref)
 			//continue
 		}
-		_, ok = t.(Teacher)
+		_, ok = t.(*Teacher)
 		if !ok {
 			log.Fatalf("*ERROR* Invalid teacher in Course %s:\n  %s\n",
 				course.Id, tref)
@@ -173,59 +160,66 @@ func (dbp *DbTopLevel) readCourse(course *Course) {
 		//tlist = append(tlist, tref)
 	}
 	// Deal with rooms. W365 can have a single RoomGroup or a list of Rooms.
-	rclist := []Ref{}     // choice list
-	taglist := []string{} // list of room Tags/Shortcuts
-	var rm Ref            // actual "room"
-	for _, rref := range course.PreferredRooms {
-		r, ok := dbp.Elements[rref]
-		if !ok {
-			log.Fatalf(
-				"*ERROR* Unknown preferred room in Course %s:\n  %s\n",
-				course.Id, rref)
-			//continue
+
+	rref := Ref("")
+	if len(course.PreferredRooms) > 1 {
+		// Make a RoomChoiceGroup
+		var estr string
+		rref, estr = dbp.makeRoomChoiceGroup(course.PreferredRooms)
+		if estr != "" {
+			log.Printf("*ERROR* In Course %s:\n%s", course.Id, estr)
 		}
-		rr, ok := r.(Room)
+	} else if len(course.PreferredRooms) == 1 {
+		// Check that room is Room or RoomGroup.
+		rref0 := course.PreferredRooms[0]
+		r, ok := dbp.Elements[rref0]
 		if ok {
-			rclist = append(rclist, rref)
-			taglist = append(taglist, rr.Tag)
+			_, ok = r.(*Room)
+			if ok {
+				rref = rref0
+			} else {
+				_, ok = r.(*RoomGroup)
+				if ok {
+					rref = rref0
+				} else {
+					log.Printf("*ERROR* Invalid room in Course %s:\n  %s\n",
+						course.Id, rref0)
+				}
+			}
 		} else {
-			_, ok = r.(RoomGroup)
+			log.Printf("*ERROR* Unknown room in Course %s:\n  %s\n",
+				course.Id, rref0)
+		}
+	}
+	if course.Room != "" {
+		if rref != "" {
+			log.Printf(
+				"*ERROR* Course has both Room and Rooms entries:\n %s\n",
+				course.Id)
+		}
+		r, ok := dbp.Elements[course.Room]
+		if ok {
+			_, ok = r.(*Room)
 			if !ok {
-				log.Fatalf(
-					"*ERROR* Invalid preferred room in Course %s:\n  %s\n",
-					course.Id, rref)
-				//continue
+				_, ok = r.(*RoomGroup)
+				if !ok {
+					_, ok = r.(*RoomChoiceGroup)
+					if !ok {
+						log.Printf(
+							"*ERROR* Invalid room in Course %s:\n  %s\n",
+							course.Id, course.Room)
+						course.Room = ""
+					}
+				}
 			}
-			rclist = []Ref{rref}
-			if len(course.PreferredRooms) != 1 {
-				log.Printf(
-					"*ERROR* Mixed Rooms and RoomGroups in Course %s\n",
-					course.Id)
-			}
-			break
+
+		} else {
+			log.Printf("*ERROR* Unknown room in Course %s:\n  %s\n",
+				course.Id, course.Room)
+			course.Room = ""
 		}
+	} else {
+		course.Room = rref
 	}
-	if len(rclist) == 1 {
-		// Take the single Room.
-		rm = rclist[0]
-	} else if len(rclist) > 1 {
-		// Need a RoomChoiceGroup.
-		// Reuse these if the same list appears again, but treat the room
-		// order as significant.
-		rs := strings.Join(taglist, ",")
-		rm, ok = dbp.RoomChoiceTags[rs]
-		if !ok {
-			rk := fmt.Sprintf("RC%03d", len(dbdata.roomchoices)+1)
-			rm = dbdata.nextId()
-			dbp.RoomChoiceGroups = append(
-				dbp.RoomChoiceGroups, db.RoomChoiceGroup{
-					Id:    rm,
-					Tag:   rk,
-					Name:  rs,
-					Rooms: rclist,
-				})
-			dbdata.roomchoices[rs] = rm
-		}
-	}
-	return sr, glist, tlist, rm
+	course.PreferredRooms = nil
 }

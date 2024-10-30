@@ -1,6 +1,7 @@
 package w365tt
 
 import (
+	"fmt"
 	"log"
 	"strconv"
 	"strings"
@@ -40,6 +41,7 @@ func (dbp *DbTopLevel) readRoomGroups() {
 	}
 }
 
+// Call this after all room types have been "read".
 func (dbp *DbTopLevel) checkRoomGroups() {
 	for i := 0; i < len(dbp.RoomGroups); i++ {
 		n := &dbp.RoomGroups[i]
@@ -75,7 +77,11 @@ func (dbp *DbTopLevel) checkRoomGroups() {
 			n.Tag = tag
 			dbp.RoomTags[tag] = n.Id
 			// Also extend the name
-			n.Name = strings.Join(taglist, ",") + ":" + n.Name
+			if n.Name == "" {
+				n.Name = strings.Join(taglist, ",")
+			} else {
+				n.Name = strings.Join(taglist, ",") + ":: " + n.Name
+			}
 		} else if n.Name == "" {
 			n.Name = strings.Join(taglist, ",")
 		}
@@ -83,7 +89,7 @@ func (dbp *DbTopLevel) checkRoomGroups() {
 	}
 }
 
-// Here the Tags are not checked, there should always be one.
+// Here the Tags are not checked (there should always be one ...).
 func (dbp *DbTopLevel) readRoomChoiceGroups() {
 	for i := 0; i < len(dbp.RoomChoiceGroups); i++ {
 		n := &dbp.RoomChoiceGroups[i]
@@ -113,8 +119,8 @@ func (dbp *DbTopLevel) readRoomChoiceGroups() {
 	}
 }
 
-// TODO: It's not yet clear how/whether I will use this.
-func (dbp *DbTopLevel) makeRoomChoiceGroup(groups []Ref) Ref {
+func (dbp *DbTopLevel) makeRoomChoiceGroup(groups []Ref) (Ref, string) {
+	erlist := []string{} // Error messages
 	// Collect the Ids and Tags of the component rooms.
 	taglist := []string{}
 	reflist := []Ref{}
@@ -128,34 +134,38 @@ func (dbp *DbTopLevel) makeRoomChoiceGroup(groups []Ref) Ref {
 				continue
 			}
 		}
-		log.Printf(
-			"*ERROR* Invalid Room in new RoomChoiceGroup:\n  %s\n",
-			rref)
+		erlist = append(erlist,
+			fmt.Sprintf(
+				"  ++ Invalid Room in new RoomChoiceGroup:\n  %s\n", rref))
 	}
-
-	// Make a new Tag
-	var tag string
-	i := 0
-	for {
-		i++
-		tag = "[" + strconv.Itoa(i) + "]"
-		_, nok := dbp.RoomTags[tag]
-		if !nok {
-			break
-		}
-	}
-	// Add new Element
-	id := dbp.NewId()
 	name := strings.Join(taglist, ",")
-	rcglen := len(dbp.RoomChoiceGroups)
-	dbp.RoomChoiceGroups = append(dbp.RoomChoiceGroups,
-		RoomChoiceGroup{
-			Id:    id,
-			Tag:   tag,
-			Name:  name,
-			Rooms: reflist,
-		})
-	dbp.AddElement(id, &dbp.RoomChoiceGroups[rcglen])
-	dbp.RoomTags[tag] = id
-	return id
+	// Reuse existing Element when the rooms match.
+	id, ok := dbp.RoomChoiceNames[name]
+	if !ok {
+		// Make a new Tag
+		var tag string
+		i := 0
+		for {
+			i++
+			tag = "[" + strconv.Itoa(i) + "]"
+			_, nok := dbp.RoomTags[tag]
+			if !nok {
+				break
+			}
+		}
+		// Add new Element
+		id = dbp.NewId()
+		rcglen := len(dbp.RoomChoiceGroups)
+		dbp.RoomChoiceGroups = append(dbp.RoomChoiceGroups,
+			RoomChoiceGroup{
+				Id:    id,
+				Tag:   tag,
+				Name:  name,
+				Rooms: reflist,
+			})
+		dbp.AddElement(id, &dbp.RoomChoiceGroups[rcglen])
+		dbp.RoomTags[tag] = id
+		dbp.RoomChoiceNames[name] = id
+	}
+	return id, strings.Join(erlist, "")
 }
