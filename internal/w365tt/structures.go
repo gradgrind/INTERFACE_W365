@@ -174,11 +174,11 @@ type DbTopLevel struct {
 	Constraints      map[string]interface{}
 
 	// These fields do not belong in the JSON object.
-	Elements       map[Ref]interface{} `json:"-"`
-	MaxId          int                 `json:"-"` // for "indexed" Ids only
-	SubjectTags    map[string]Ref      `json:"-"`
-	SubjectNames   map[string]string   `json:"-"`
-	RoomChoiceTags map[string]Ref      `json:"-"`
+	Elements     map[Ref]interface{} `json:"-"`
+	MaxId        int                 `json:"-"` // for "indexed" Ids only
+	SubjectTags  map[string]Ref      `json:"-"`
+	SubjectNames map[string]string   `json:"-"`
+	RoomTags     map[string]Ref      `json:"-"`
 	//RoomChoices    map[string]Ref      `json:"-"`
 }
 
@@ -211,7 +211,7 @@ func (db *DbTopLevel) checkDb() {
 	}
 	db.SubjectTags = map[string]Ref{}
 	db.SubjectNames = map[string]string{}
-	db.RoomChoiceTags = map[string]Ref{}
+	db.RoomTags = map[string]Ref{}
 	// Initialize the Ref -> Element mapping
 	db.Elements = make(map[Ref]interface{})
 	if len(db.Days) == 0 {
