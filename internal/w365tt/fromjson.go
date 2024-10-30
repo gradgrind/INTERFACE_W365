@@ -9,7 +9,7 @@ import (
 )
 
 // Read to the local, tweaked DbTopLevel
-func ReadJSON(jsonpath string) DbTopLevel {
+func ReadJSON(jsonpath string) *DbTopLevel {
 	// Open the  JSON file
 	jsonFile, err := os.Open(jsonpath)
 	if err != nil {
@@ -25,7 +25,7 @@ func ReadJSON(jsonpath string) DbTopLevel {
 	if err != nil {
 		log.Fatalf("Could not unmarshal json: %s\n", err)
 	}
-	return v
+	return &v
 }
 
 func defaultMinus1(v *interface{}) {
@@ -59,16 +59,10 @@ type xData struct {
 	*/
 }
 
-func LoadJSON(jsonpath string) DbTopLevel {
-	w365data := ReadJSON(jsonpath)
-	emap := w365data.checkDb()
-	dbdata := xData{
-		data:         w365data,
-		dbi:          0,
-		elements:     emap,
-		subjecttags:  map[string]Ref{},
-		subjectnames: map[string]string{},
-	}
+func LoadJSON(jsonpath string) *DbTopLevel {
+	dbdata := ReadJSON(jsonpath)
+	dbdata.checkDb()
+	// Days need no initialization.
 	dbdata.readHours()
 	dbdata.readTeachers()
 	dbdata.readSubjects()
@@ -87,26 +81,21 @@ func LoadJSON(jsonpath string) DbTopLevel {
 		dbdata.addLessons()
 	*/
 
-	return dbdata.data
+	return dbdata
 }
 
-func (dbdata *xData) nextId() Ref {
-	dbdata.dbi++
-	return Ref(fmt.Sprintf("#%d", dbdata.dbi))
-}
-
-func (dbdata *xData) readHours() {
-	mdbok := len(dbdata.data.Info.MiddayBreak) == 0
-	for i := 0; i < len(dbdata.data.Hours); i++ {
-		n := &dbdata.data.Hours[i]
+func (dbp *DbTopLevel) readHours() {
+	mdbok := len(dbp.Info.MiddayBreak) == 0
+	for i := 0; i < len(dbp.Hours); i++ {
+		n := &dbp.Hours[i]
 		if n.FirstAfternoonHour {
-			dbdata.data.Info.FirstAfternoonHour = i
+			dbp.Info.FirstAfternoonHour = i
 			n.FirstAfternoonHour = false
 		}
 		if n.MiddayBreak {
 			if mdbok {
-				dbdata.data.Info.MiddayBreak = append(
-					dbdata.data.Info.MiddayBreak, i)
+				dbp.Info.MiddayBreak = append(
+					dbp.Info.MiddayBreak, i)
 			} else {
 				log.Println("*ERROR* MiddayBreak set in Info AND Hours")
 			}
@@ -118,9 +107,9 @@ func (dbdata *xData) readHours() {
 	}
 }
 
-func (dbdata *xData) readTeachers() {
-	for i := 0; i < len(dbdata.data.Teachers); i++ {
-		n := &dbdata.data.Teachers[i]
+func (dbp *DbTopLevel) readTeachers() {
+	for i := 0; i < len(dbp.Teachers); i++ {
+		n := &dbp.Teachers[i]
 		if len(n.NotAvailable) == 0 {
 			// Avoid a null value
 			n.NotAvailable = []TimeSlot{}
@@ -150,7 +139,7 @@ func (dbdata *xData) readTeachers() {
 
 
 func (dbdata *xData) addSuperCourses() {
-	dbdata.data.SuperCourses = []db.SuperCourse{}
+	dbp.SuperCourses = []db.SuperCourse{}
 	dbdata.supercourses = map[Ref]db.DbRef{}
 	for _, d := range dbdata.w365.SuperCourses {
 		cr := dbdata.nextId()
@@ -160,7 +149,7 @@ func (dbdata *xData) addSuperCourses() {
 				d.Id, d.Subject)
 			continue
 		}
-		dbdata.data.SuperCourses = append(dbdata.data.SuperCourses, db.SuperCourse{
+		dbp.SuperCourses = append(dbp.SuperCourses, db.SuperCourse{
 			Id:        cr,
 			Subject:   sr,
 			Reference: string(d.Id),
@@ -170,7 +159,7 @@ func (dbdata *xData) addSuperCourses() {
 }
 
 func (dbdata *xData) addSubCourses() {
-	dbdata.data.SubCourses = []db.SubCourse{}
+	dbp.SubCourses = []db.SubCourse{}
 	dbdata.subcourses = map[Ref]db.DbRef{}
 	for _, d := range dbdata.w365.SubCourses {
 		sr, glist, tlist, rm := dbdata.readCourse(
@@ -182,7 +171,7 @@ func (dbdata *xData) addSubCourses() {
 			continue
 		}
 		cr := dbdata.nextId()
-		dbdata.data.SubCourses = append(dbdata.data.SubCourses, db.SubCourse{
+		dbp.SubCourses = append(dbp.SubCourses, db.SubCourse{
 			Id:          cr,
 			SuperCourse: sc,
 			Subject:     sr,
@@ -196,7 +185,7 @@ func (dbdata *xData) addSubCourses() {
 }
 
 func (dbdata *xData) addLessons() {
-	dbdata.data.Lessons = []db.Lesson{}
+	dbp.Lessons = []db.Lesson{}
 	for _, d := range dbdata.w365.Lessons {
 		// The course can be either a Course or a SubCourse.
 		crs, ok := dbdata.courses[d.Course]
@@ -218,7 +207,7 @@ func (dbdata *xData) addLessons() {
 					d.Id, r)
 			}
 		}
-		dbdata.data.Lessons = append(dbdata.data.Lessons, db.Lesson{
+		dbp.Lessons = append(dbp.Lessons, db.Lesson{
 			Id:        dbdata.nextId(),
 			Course:    crs,
 			Duration:  d.Duration,

@@ -4,29 +4,28 @@ import (
 	"log"
 )
 
-func (dbdata *xData) readSubjects() {
-	for _, n := range dbdata.data.Subjects {
-		_, nok := dbdata.subjecttags[n.Tag]
+func (dbp *DbTopLevel) readSubjects() {
+	for _, n := range dbp.Subjects {
+		_, nok := dbp.SubjectTags[n.Tag]
 		if nok {
 			log.Fatalf("*ERROR* Subject Tag (Shortcut) defined twice: %s\n",
 				n.Tag)
 		}
-		t, nok := dbdata.subjectnames[n.Name]
+		t, nok := dbp.SubjectNames[n.Name]
 		if nok {
 			log.Printf("*WARNING* Subject Name defined twice (different"+
 				" Tag/Shortcut):\n  %s (%s/%s)\n", n.Name, t, n.Tag)
 		} else {
-			dbdata.subjectnames[n.Name] = n.Tag
+			dbp.SubjectNames[n.Name] = n.Tag
 		}
-		dbdata.subjecttags[n.Tag] = n.Id
+		dbp.SubjectTags[n.Tag] = n.Id
 	}
 }
 
 /*
-
 func (dbdata *xData) readCourses() {
-	for i := 0; i < len(dbdata.data.Courses); i++ {
-		n := &dbdata.data.Courses[i]
+	for i := 0; i < len(dbp.Courses); i++ {
+		n := &dbp.Courses[i]
 		dbdata.elements[n.Id] = n
 
 		dbdata.readCourse(n)
@@ -67,13 +66,13 @@ func (dbdata *xData) readCourse(course *Course) {
 			}
 			skname := strings.Join(sklist, ",")
 			stag, ok := dbdata.subjectnames[skname]
-            if ok {
-                // The Name has already been used.
-                course.Subject = dbdata.subjecttags[stag]
-            } else {
-                // Need a new Subject.
+			if ok {
+				// The Name has already been used.
+				course.Subject = dbdata.subjecttags[stag]
+			} else {
+				// Need a new Subject.
 
-                ref = new
+				ref = dbdata.newId()
 				s := Subject{
 					Id:   sref,
 					Tag:  sk,
@@ -82,7 +81,7 @@ func (dbdata *xData) readCourse(course *Course) {
 
 				sk := fmt.Sprintf("X%02d", len(dbdata.newsubjects)+1)
 				sr = dbdata.nextId()
-				dbdata.data.Subjects = append(dbdata.data.Subjects,
+				dbp.Subjects = append(dbp.Subjects,
 					db.Subject{
 						Id:   sr,
 						Tag:  sk,
@@ -164,8 +163,8 @@ func (dbdata *xData) readCourse(course *Course) {
 		if !ok {
 			rk := fmt.Sprintf("RC%03d", len(dbdata.roomchoices)+1)
 			rm = dbdata.nextId()
-			dbdata.data.RoomChoiceGroups = append(
-				dbdata.data.RoomChoiceGroups, db.RoomChoiceGroup{
+			dbp.RoomChoiceGroups = append(
+				dbp.RoomChoiceGroups, db.RoomChoiceGroup{
 					Id:    rm,
 					Tag:   rk,
 					Name:  rs,
@@ -176,5 +175,4 @@ func (dbdata *xData) readCourse(course *Course) {
 	}
 	return sr, glist, tlist, rm
 }
-
 */

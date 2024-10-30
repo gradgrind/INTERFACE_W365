@@ -1,6 +1,11 @@
 package w365tt
 
-import "log"
+import (
+	"fmt"
+	"log"
+	"strconv"
+	"strings"
+)
 
 // The structures used for the "database", adapted to read from W365
 //TODO: Currently dealing only with the elements needed for the timetable
@@ -167,14 +172,45 @@ type DbTopLevel struct {
 	SubCourses       []SubCourse
 	Lessons          []Lesson
 	Constraints      map[string]interface{}
+
+	// These fields do not belong in the JSON object.
+	Elements     map[Ref]interface{} `json:"-"`
+	MaxId        int                 `json:"-"` // for "indexed" Ids only
+	SubjectTags  map[string]Ref      `json:"-"`
+	SubjectNames map[string]string   `json:"-"`
 }
 
-func (db *DbTopLevel) checkDb() map[Ref]interface{} {
+func (db *DbTopLevel) NewId() Ref {
+	return Ref(fmt.Sprintf("#%d", db.MaxId+1))
+}
+
+func (db *DbTopLevel) AddElement(ref Ref, element interface{}) {
+	_, nok := db.Elements[ref]
+	if nok {
+		log.Fatalf("*ERROR* Element Id defined more than once:\n  %s\n", ref)
+	}
+	db.Elements[ref] = element
+	// Special handling if it is an "indexed" Id.
+	if strings.HasPrefix(string(ref), "#") {
+		s := strings.TrimPrefix(string(ref), "#")
+		i, err := strconv.Atoi(s)
+		if err == nil {
+			if i > db.MaxId {
+				db.MaxId = i
+			}
+		}
+	}
+}
+
+func (db *DbTopLevel) checkDb() {
+	// Initializations
 	if db.Info.MiddayBreak == nil {
 		db.Info.MiddayBreak = []int{}
 	}
+	db.SubjectTags = map[string]Ref{}
+	db.SubjectNames = map[string]string{}
 	// Initialize the Ref -> Element mapping
-	dbrefs := make(map[Ref]interface{})
+	db.Elements = make(map[Ref]interface{})
 	if len(db.Days) == 0 {
 		log.Fatalln("*ERROR* No Days")
 	}
@@ -194,82 +230,73 @@ func (db *DbTopLevel) checkDb() map[Ref]interface{} {
 		log.Fatalln("*ERROR* No Classes")
 	}
 	for i, n := range db.Days {
-		addId(dbrefs, n.Id, &db.Days[i])
+		db.AddElement(n.Id, &db.Days[i])
 	}
 	for i, n := range db.Hours {
-		addId(dbrefs, n.Id, &db.Hours[i])
+		db.AddElement(n.Id, &db.Hours[i])
 	}
 	for i, n := range db.Teachers {
-		addId(dbrefs, n.Id, &db.Teachers[i])
+		db.AddElement(n.Id, &db.Teachers[i])
 	}
 	for i, n := range db.Subjects {
-		addId(dbrefs, n.Id, &db.Subjects[i])
+		db.AddElement(n.Id, &db.Subjects[i])
 	}
 	for i, n := range db.Rooms {
-		addId(dbrefs, n.Id, &db.Rooms[i])
+		db.AddElement(n.Id, &db.Rooms[i])
 	}
 	for i, n := range db.Classes {
-		addId(dbrefs, n.Id, &db.Classes[i])
+		db.AddElement(n.Id, &db.Classes[i])
 	}
 	if db.RoomGroups == nil {
 		db.RoomGroups = []RoomGroup{}
 	} else {
 		for i, n := range db.RoomGroups {
-			addId(dbrefs, n.Id, &db.RoomGroups[i])
+			db.AddElement(n.Id, &db.RoomGroups[i])
 		}
 	}
 	if db.RoomChoiceGroups == nil {
 		db.RoomChoiceGroups = []RoomChoiceGroup{}
 	} else {
 		for i, n := range db.RoomChoiceGroups {
-			addId(dbrefs, n.Id, &db.RoomChoiceGroups[i])
+			db.AddElement(n.Id, &db.RoomChoiceGroups[i])
 		}
 	}
 	if db.Groups == nil {
 		db.Groups = []Group{}
 	} else {
 		for i, n := range db.Groups {
-			addId(dbrefs, n.Id, &db.Groups[i])
+			db.AddElement(n.Id, &db.Groups[i])
 		}
 	}
 	if db.Courses == nil {
 		db.Courses = []Course{}
 	} else {
 		for i, n := range db.Courses {
-			addId(dbrefs, n.Id, &db.Courses[i])
+			db.AddElement(n.Id, &db.Courses[i])
 		}
 	}
 	if db.SuperCourses == nil {
 		db.SuperCourses = []SuperCourse{}
 	} else {
 		for i, n := range db.SuperCourses {
-			addId(dbrefs, n.Id, &db.SuperCourses[i])
+			db.AddElement(n.Id, &db.SuperCourses[i])
 		}
 	}
 	if db.SubCourses == nil {
 		db.SubCourses = []SubCourse{}
 	} else {
 		for i, n := range db.SubCourses {
-			addId(dbrefs, n.Id, &db.SubCourses[i])
+			db.AddElement(n.Id, &db.SubCourses[i])
 		}
 	}
 	if db.Lessons == nil {
 		db.Lessons = []Lesson{}
 	} else {
 		for i, n := range db.Lessons {
-			addId(dbrefs, n.Id, &db.Lessons[i])
+			db.AddElement(n.Id, &db.Lessons[i])
 		}
 	}
 	if db.Constraints == nil {
 		db.Constraints = make(map[string]interface{})
 	}
-	return dbrefs
-}
-
-func addId(refs map[Ref]interface{}, id Ref, node interface{}) {
-	_, nok := refs[id]
-	if nok {
-		log.Fatalf("*ERROR* Element Id defined more than once:\n  %s\n", id)
-	}
-	refs[id] = node
 }

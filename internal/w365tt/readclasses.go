@@ -4,18 +4,18 @@ import (
 	"log"
 )
 
-func (dbdata *xData) readClasses() {
+func (dbp *DbTopLevel) readClasses() {
 	// Every Class-Group must be within one – and only one – Class-Division.
 	// To handle that, the Group references are first gathered here. Then,
 	// when a Group is "used" it is flagged. At the end, any unused Groups
 	// can be found and reported.
 	pregroups := map[Ref]bool{}
-	for _, n := range dbdata.data.Groups {
+	for _, n := range dbp.Groups {
 		pregroups[n.Id] = false
 	}
 
-	for i := 0; i < len(dbdata.data.Classes); i++ {
-		n := &dbdata.data.Classes[i]
+	for i := 0; i < len(dbp.Classes); i++ {
+		n := &dbp.Classes[i]
 
 		if len(n.NotAvailable) == 0 {
 			// Avoid a null value
@@ -68,7 +68,7 @@ func (dbdata *xData) readClasses() {
 	for g, used := range pregroups {
 		if !used {
 			log.Printf("*ERROR* Group not in Division, removing:\n  %s,", g)
-			delete(dbdata.elements, g)
+			delete(dbp.Elements, g)
 			//TODO: Also remove from Groups list?
 		}
 	}
