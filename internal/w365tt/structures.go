@@ -169,10 +169,12 @@ type DbTopLevel struct {
 	Constraints      map[string]interface{}
 }
 
-func (db *DbTopLevel) checkDb() {
+func (db *DbTopLevel) checkDb() map[Ref]interface{} {
 	if db.Info.MiddayBreak == nil {
 		db.Info.MiddayBreak = []int{}
 	}
+	// Initialize the Ref -> Element mapping
+	dbrefs := make(map[Ref]interface{})
 	if len(db.Days) == 0 {
 		log.Fatalln("*ERROR* No Days")
 	}
@@ -188,31 +190,86 @@ func (db *DbTopLevel) checkDb() {
 	if len(db.Rooms) == 0 {
 		log.Fatalln("*ERROR* No Rooms")
 	}
-	if db.RoomGroups == nil {
-		db.RoomGroups = []RoomGroup{}
-	}
-	if db.RoomChoiceGroups == nil {
-		db.RoomChoiceGroups = []RoomChoiceGroup{}
-	}
 	if len(db.Classes) == 0 {
 		log.Fatalln("*ERROR* No Classes")
 	}
+	for i, n := range db.Days {
+		addId(dbrefs, n.Id, &db.Days[i])
+	}
+	for i, n := range db.Hours {
+		addId(dbrefs, n.Id, &db.Hours[i])
+	}
+	for i, n := range db.Teachers {
+		addId(dbrefs, n.Id, &db.Teachers[i])
+	}
+	for i, n := range db.Subjects {
+		addId(dbrefs, n.Id, &db.Subjects[i])
+	}
+	for i, n := range db.Rooms {
+		addId(dbrefs, n.Id, &db.Rooms[i])
+	}
+	for i, n := range db.Classes {
+		addId(dbrefs, n.Id, &db.Classes[i])
+	}
+	if db.RoomGroups == nil {
+		db.RoomGroups = []RoomGroup{}
+	} else {
+		for i, n := range db.RoomGroups {
+			addId(dbrefs, n.Id, &db.RoomGroups[i])
+		}
+	}
+	if db.RoomChoiceGroups == nil {
+		db.RoomChoiceGroups = []RoomChoiceGroup{}
+	} else {
+		for i, n := range db.RoomChoiceGroups {
+			addId(dbrefs, n.Id, &db.RoomChoiceGroups[i])
+		}
+	}
 	if db.Groups == nil {
 		db.Groups = []Group{}
+	} else {
+		for i, n := range db.Groups {
+			addId(dbrefs, n.Id, &db.Groups[i])
+		}
 	}
 	if db.Courses == nil {
 		db.Courses = []Course{}
+	} else {
+		for i, n := range db.Courses {
+			addId(dbrefs, n.Id, &db.Courses[i])
+		}
 	}
 	if db.SuperCourses == nil {
 		db.SuperCourses = []SuperCourse{}
+	} else {
+		for i, n := range db.SuperCourses {
+			addId(dbrefs, n.Id, &db.SuperCourses[i])
+		}
 	}
 	if db.SubCourses == nil {
 		db.SubCourses = []SubCourse{}
+	} else {
+		for i, n := range db.SubCourses {
+			addId(dbrefs, n.Id, &db.SubCourses[i])
+		}
 	}
 	if db.Lessons == nil {
 		db.Lessons = []Lesson{}
+	} else {
+		for i, n := range db.Lessons {
+			addId(dbrefs, n.Id, &db.Lessons[i])
+		}
 	}
 	if db.Constraints == nil {
 		db.Constraints = make(map[string]interface{})
 	}
+	return dbrefs
+}
+
+func addId(refs map[Ref]interface{}, id Ref, node interface{}) {
+	_, nok := refs[id]
+	if nok {
+		log.Fatalf("*ERROR* Element Id defined more than once:\n  %s\n", id)
+	}
+	refs[id] = node
 }

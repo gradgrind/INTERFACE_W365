@@ -1,23 +1,21 @@
 package w365tt
 
 import (
-	"fmt"
 	"log"
 )
 
 func (dbdata *xData) readClasses() {
 	// Every Class-Group must be within one – and only one – Class-Division.
-	// To handle that, the data for the Groups is first gathered here, but
-	// the Elements are only added to the database map when the Divisions
-	// are read.
-	pregroups := map[Ref]*Group{}
-	for i, n := range dbdata.data.Groups {
-		pregroups[n.Id] = &dbdata.data.Groups[i]
+	// To handle that, the Group references are first gathered here. Then,
+	// when a Group is "used" it is flagged. At the end, any unused Groups
+	// can be found and reported.
+	pregroups := map[Ref]bool{}
+	for _, n := range dbdata.data.Groups {
+		pregroups[n.Id] = false
 	}
 
 	for i := 0; i < len(dbdata.data.Classes); i++ {
 		n := &dbdata.data.Classes[i]
-		dbdata.elements[n.Id] = n
 
 		if len(n.NotAvailable) == 0 {
 			// Avoid a null value
@@ -39,32 +37,39 @@ func (dbdata *xData) readClasses() {
 			n.MaxAfternoons = -1
 		}
 
-		// Get the divisions and add their groups to the database.
+		// Get the divisions and flag their Groups.
 		for i, wdiv := range n.Divisions {
 			glist := []Ref{}
 			for _, g := range wdiv.Groups {
 				// get Tag
-				group, ok := pregroups[g]
+				flag, ok := pregroups[g]
 				if ok {
-					// Add Group to database, if it's not already there
-					if _, nok := dbdata.elements[g]; nok {
+					if flag {
 						log.Fatalf("*ERROR* Group Defined in"+
 							" multiple Divisions:\n  -- %s\n", g)
 					}
-					dbdata.elements[g] = group
+					// Flag Group and add to division's group list
+					pregroups[g] = true
 					glist = append(glist, g)
 				} else {
-					fmt.Printf("*ERROR* Unknown Group in Class %s,"+
+					log.Printf("*ERROR* Unknown Group in Class %s,"+
 						" Division %s:\n  %s\n", n.Tag, wdiv.Name, g)
 				}
 			}
 			// Accept Divisions which have too few Groups at this stage.
 			if len(glist) < 2 {
-				fmt.Printf("*WARNING* In Class %s,"+
+				log.Printf("*WARNING* In Class %s,"+
 					" not enough valid Groups (>1) in Division %s\n",
 					n.Tag, wdiv.Name)
 			}
 			n.Divisions[i].Groups = glist
+		}
+	}
+	for g, used := range pregroups {
+		if !used {
+			log.Printf("*ERROR* Group not in Division, removing:\n  %s,", g)
+			delete(dbdata.elements, g)
+			//TODO: Also remove from Groups list?
 		}
 	}
 }

@@ -2,6 +2,7 @@ package w365tt
 
 import (
 	"fmt"
+	"log"
 	"slices"
 	"strconv"
 	"strings"
@@ -10,7 +11,6 @@ import (
 func (dbdata *xData) readRooms() {
 	for i := 0; i < len(dbdata.data.Rooms); i++ {
 		n := &dbdata.data.Rooms[i]
-		dbdata.elements[n.Id] = n
 		if len(n.NotAvailable) == 0 {
 			// Avoid a null value
 			n.NotAvailable = []TimeSlot{}
@@ -23,7 +23,6 @@ func (dbdata *xData) readRoomGroups() {
 	tagless := []*RoomGroup{}
 	for i := 0; i < len(dbdata.data.RoomGroups); i++ {
 		n := &dbdata.data.RoomGroups[i]
-		dbdata.elements[n.Id] = n
 
 		n.Rooms = slices.DeleteFunc(n.Rooms, func(r Ref) bool {
 			if rm, ok := dbdata.elements[r]; ok {
@@ -31,7 +30,7 @@ func (dbdata *xData) readRoomGroups() {
 					return false
 				}
 			}
-			fmt.Printf("*ERROR* Unknown Room in RoomGroup %s:\n  %s\n",
+			log.Printf("*ERROR* Unknown Room in RoomGroup %s:\n  %s\n",
 				n.Tag, r)
 			return true
 		})
@@ -69,7 +68,6 @@ func (dbdata *xData) readRoomChoiceGroups() {
 	tagless := []*RoomChoiceGroup{}
 	for i := 0; i < len(dbdata.data.RoomChoiceGroups); i++ {
 		n := &dbdata.data.RoomChoiceGroups[i]
-		dbdata.elements[n.Id] = n
 
 		n.Rooms = slices.DeleteFunc(n.Rooms, func(r Ref) bool {
 			if rm, ok := dbdata.elements[r]; ok {
@@ -77,7 +75,7 @@ func (dbdata *xData) readRoomChoiceGroups() {
 					return false
 				}
 			}
-			fmt.Printf("*ERROR* Unknown Room in RoomChoiceGroup %s:\n  %s\n",
+			log.Printf("*ERROR* Unknown Room in RoomChoiceGroup %s:\n  %s\n",
 				n.Tag, r)
 			return true
 		})

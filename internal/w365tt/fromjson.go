@@ -35,9 +35,11 @@ func defaultMinus1(v *interface{}) {
 }
 
 type xData struct {
-	data     DbTopLevel
-	dbi      int // counter, for new db references
-	elements map[Ref]interface{}
+	data         DbTopLevel
+	dbi          int // counter, for new db references
+	elements     map[Ref]interface{}
+	subjecttags  map[string]Ref
+	subjectnames map[string]string
 
 	/*
 		teachers     map[Ref]db.DbRef
@@ -58,19 +60,18 @@ type xData struct {
 }
 
 func LoadJSON(jsonpath string) DbTopLevel {
+	w365data := ReadJSON(jsonpath)
+	emap := w365data.checkDb()
 	dbdata := xData{
-		data:     ReadJSON(jsonpath),
-		dbi:      0,
-		elements: make(map[Ref]interface{}),
-	}
-	for i, n := range dbdata.data.Days {
-		dbdata.elements[n.Id] = &dbdata.data.Days[i]
+		data:         w365data,
+		dbi:          0,
+		elements:     emap,
+		subjecttags:  map[string]Ref{},
+		subjectnames: map[string]string{},
 	}
 	dbdata.readHours()
 	dbdata.readTeachers()
-	for i, n := range dbdata.data.Subjects {
-		dbdata.elements[n.Id] = &dbdata.data.Subjects[i]
-	}
+	dbdata.readSubjects()
 	dbdata.readRooms()
 	dbdata.readRoomGroups()
 	dbdata.readRoomChoiceGroups()
@@ -86,7 +87,6 @@ func LoadJSON(jsonpath string) DbTopLevel {
 		dbdata.addLessons()
 	*/
 
-	dbdata.data.checkDb()
 	return dbdata.data
 }
 
@@ -99,7 +99,6 @@ func (dbdata *xData) readHours() {
 	mdbok := len(dbdata.data.Info.MiddayBreak) == 0
 	for i := 0; i < len(dbdata.data.Hours); i++ {
 		n := &dbdata.data.Hours[i]
-		dbdata.elements[n.Id] = n
 		if n.FirstAfternoonHour {
 			dbdata.data.Info.FirstAfternoonHour = i
 			n.FirstAfternoonHour = false
@@ -109,7 +108,7 @@ func (dbdata *xData) readHours() {
 				dbdata.data.Info.MiddayBreak = append(
 					dbdata.data.Info.MiddayBreak, i)
 			} else {
-				fmt.Printf("*ERROR* MiddayBreak set in Info AND Hours\n")
+				log.Println("*ERROR* MiddayBreak set in Info AND Hours")
 			}
 			n.MiddayBreak = false
 		}
@@ -122,7 +121,6 @@ func (dbdata *xData) readHours() {
 func (dbdata *xData) readTeachers() {
 	for i := 0; i < len(dbdata.data.Teachers); i++ {
 		n := &dbdata.data.Teachers[i]
-		dbdata.elements[n.Id] = n
 		if len(n.NotAvailable) == 0 {
 			// Avoid a null value
 			n.NotAvailable = []TimeSlot{}
@@ -150,155 +148,6 @@ func (dbdata *xData) readTeachers() {
 
 /*
 
-func (dbdata *xData) readCourse(
-	id Ref,
-	subject Ref,
-	subjects []Ref,
-	groups []Ref,
-	teachers []Ref,
-	rooms []Ref,
-) (db.DbRef, []db.DbRef, []db.DbRef, db.DbRef) {
-	// Deal with subject
-	var sr db.DbRef = 0
-	var ok bool
-	msg := "*ERROR* Course %s:\n  Unknown Subject: %s\n"
-	if subject == "" {
-		if len(subjects) == 1 {
-			wsid := subjects[0]
-			sr, ok = dbdata.subjects[wsid]
-			if !ok {
-				fmt.Printf(msg, id, wsid)
-			}
-		} else if len(subjects) > 1 {
-			// Make a subject name
-			sklist := []string{}
-			for _, wsid := range subjects {
-				// Need Shortcut field
-				sk, ok := dbdata.subjectmap[wsid]
-				if ok {
-					sklist = append(sklist, sk)
-				} else {
-					fmt.Printf(msg, id, wsid)
-				}
-			}
-			skname := strings.Join(sklist, ",")
-			sr, ok = dbdata.newsubjects[skname]
-			if !ok {
-				sk := fmt.Sprintf("X%02d", len(dbdata.newsubjects)+1)
-				sr = dbdata.nextId()
-				dbdata.data.Subjects = append(dbdata.data.Subjects,
-					db.Subject{
-						Id:   sr,
-						Tag:  sk,
-						Name: skname,
-					})
-				dbdata.newsubjects[skname] = sr
-			}
-		}
-	} else {
-		if len(subjects) != 0 {
-			fmt.Printf("*ERROR* Course has both Subject AND Subjects: %s\n", id)
-		}
-		wsid := subject
-		sr, ok = dbdata.subjects[wsid]
-		if !ok {
-			fmt.Printf(msg, id, wsid)
-		}
-	}
-	// Deal with groups
-	glist := []db.DbRef{}
-	for _, g := range groups {
-		gr, ok := dbdata.groups[g]
-		// gr can refer to a Group or a Class.
-		if !ok {
-			// Check for class.
-			gr, ok = dbdata.classes[g]
-			if !ok {
-				fmt.Printf("*ERROR* Unknown group in Course %s:\n  %s\n", id, g)
-				continue
-			}
-		}
-		glist = append(glist, gr)
-	}
-	// Deal with teachers
-	tlist := []db.DbRef{}
-	for _, t := range teachers {
-		tr, ok := dbdata.teachers[t]
-		if !ok {
-			fmt.Printf("*ERROR* Unknown teacher in Course %s:\n  %s\n", id, t)
-			continue
-		}
-		tlist = append(tlist, tr)
-	}
-	// Deal with rooms. W365 can have a single RoomGroup or a list of Rooms
-	rclist := []db.DbRef{} // choice list
-	var rm db.DbRef        // actual "room"
-	for _, r := range rooms {
-		rr, ok := dbdata.rooms[r]
-		if ok {
-			rclist = append(rclist, rr)
-		} else {
-			rm, ok = dbdata.roomgroups[r]
-			if ok {
-				if len(rooms) != 1 {
-					rclist = []db.DbRef{}
-					fmt.Printf(
-						"*ERROR* Mixed Rooms and RoomGroups in Course %s\n", id)
-				}
-				break
-			} else {
-				fmt.Printf("*ERROR* Unknown room in Course %s:\n  %s\n", id, r)
-				continue
-			}
-		}
-	}
-	if len(rclist) == 1 {
-		// Take the single Room.
-		rm = rclist[0]
-	} else if len(rclist) > 1 {
-		// Need a RoomChoiceGroup.
-		// Reuse these if the same list appears again, but treat the
-		// order as significant.
-		rslist := []string{}
-		for _, r := range rclist {
-			rslist = append(rslist, dbdata.roomtag[r])
-		}
-		rs := strings.Join(rslist, ",")
-		rm, ok = dbdata.roomchoices[rs]
-		if !ok {
-			rk := fmt.Sprintf("RC%03d", len(dbdata.roomchoices)+1)
-			rm = dbdata.nextId()
-			dbdata.data.RoomChoiceGroups = append(
-				dbdata.data.RoomChoiceGroups, db.RoomChoiceGroup{
-					Id:    rm,
-					Tag:   rk,
-					Name:  rs,
-					Rooms: rclist,
-				})
-			dbdata.roomchoices[rs] = rm
-		}
-	}
-	return sr, glist, tlist, rm
-}
-
-func (dbdata *xData) addCourses() {
-	dbdata.data.Courses = []db.Course{}
-	dbdata.courses = map[Ref]db.DbRef{}
-	for _, d := range dbdata.w365.Courses {
-		sr, glist, tlist, rm := dbdata.readCourse(
-			d.Id, d.Subject, d.Subjects, d.Groups, d.Teachers, d.PreferredRooms)
-		cr := dbdata.nextId()
-		dbdata.data.Courses = append(dbdata.data.Courses, db.Course{
-			Id:        cr,
-			Subject:   sr,
-			Groups:    glist,
-			Teachers:  tlist,
-			Room:      rm,
-			Reference: string(d.Id),
-		})
-		dbdata.courses[d.Id] = cr
-	}
-}
 
 func (dbdata *xData) addSuperCourses() {
 	dbdata.data.SuperCourses = []db.SuperCourse{}
@@ -307,7 +156,7 @@ func (dbdata *xData) addSuperCourses() {
 		cr := dbdata.nextId()
 		sr, ok := dbdata.subjects[d.Subject]
 		if !ok {
-			fmt.Printf("*ERROR* Unknown Subject in SuperCourse %s:\n  %s\n",
+			log.Printf("*ERROR* Unknown Subject in SuperCourse %s:\n  %s\n",
 				d.Id, d.Subject)
 			continue
 		}
@@ -328,7 +177,7 @@ func (dbdata *xData) addSubCourses() {
 			d.Id, d.Subject, d.Subjects, d.Groups, d.Teachers, d.PreferredRooms)
 		sc, ok := dbdata.supercourses[d.SuperCourse]
 		if !ok {
-			fmt.Printf("*ERROR* Unknown SuperCourse in SubCourse %s:\n  %s\n",
+			log.Printf("*ERROR* Unknown SuperCourse in SubCourse %s:\n  %s\n",
 				d.Id, d.SuperCourse)
 			continue
 		}
@@ -354,7 +203,7 @@ func (dbdata *xData) addLessons() {
 		if !ok {
 			crs, ok = dbdata.subcourses[d.Course]
 			if !ok {
-				fmt.Printf("*ERROR* Invalid course in Lesson %s:\n  -- %s\n",
+				log.Printf("*ERROR* Invalid course in Lesson %s:\n  -- %s\n",
 					d.Id, d.Course)
 				continue
 			}
@@ -365,7 +214,7 @@ func (dbdata *xData) addLessons() {
 			if ok {
 				rlist = append(rlist, rr)
 			} else {
-				fmt.Printf("*ERROR* Invalid room in Lesson %s:\n  -- %s\n",
+				log.Printf("*ERROR* Invalid room in Lesson %s:\n  -- %s\n",
 					d.Id, r)
 			}
 		}
