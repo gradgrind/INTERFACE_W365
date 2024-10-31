@@ -25,7 +25,7 @@ func TestX(t *testing.T) {
 	json.Unmarshal(j, &i)
 	fmt.Printf(" +++ %#v\n", i)
 	fmt.Printf(" --- %#v\n", getString(i))
-	i = w365tt.W365Ref("XXX1")
+	i = w365tt.Ref("XXX1")
 	fmt.Printf(" +++ %#v\n", i)
 	fmt.Printf(" --- %#v\n", getString(i))
 	panic("#BUG#")
@@ -91,7 +91,7 @@ func TestFet(t *testing.T) {
 
 	// ********** Build the fet file **********
 	//xmlitem := make_fet_file(&data, alist, course2activities, sgalist)
-	xmlitem := make_fet_file(&data)
+	xmlitem := make_fet_file(data)
 	//fmt.Printf("\n*** fet:\n%v\n", xmlitem)
 	fetfile := strings.TrimSuffix(abspath, filepath.Ext(abspath)) + ".fet"
 	f, err := os.Create(fetfile)

@@ -5,10 +5,12 @@ import (
 	"encoding/json"
 	"encoding/xml"
 	"fmt"
-	"gradgrind/INTERFACE_W365/internal/db"
+	"gradgrind/INTERFACE_W365/internal/w365tt"
 	"log"
 	"strings"
 )
+
+type Ref = w365tt.Ref
 
 const fet_version = "6.25.2"
 
@@ -45,18 +47,18 @@ type fet struct {
 }
 
 type fetInfo struct {
-	db               *db.DbTopLevel
-	ref2fet          map[db.DbRef]string
-	ref2grouponly    map[db.DbRef]string
+	db               *w365tt.DbTopLevel
+	ref2fet          map[Ref]string
+	ref2grouponly    map[Ref]string
 	days             []string
 	hours            []string
 	fetdata          fet
-	courses          map[db.DbRef]int
-	subcourses       map[db.DbRef]int
-	supercourses     map[db.DbRef]int
-	supersubs        map[db.DbRef][]db.DbRef
-	classdivisions   map[db.DbRef][][]db.DbRef
-	atomicgroups     map[db.DbRef][]AtomicGroup
+	courses          map[Ref]int
+	subcourses       map[Ref]int
+	supercourses     map[Ref]int
+	supersubs        map[Ref][]Ref
+	classdivisions   map[Ref][][]Ref
+	atomicgroups     map[Ref][]AtomicGroup
 	fixed_activities []bool
 }
 
@@ -94,7 +96,7 @@ type basicSpaceConstraint struct {
 	Active            bool
 }
 
-func make_fet_file(dbdata *db.DbTopLevel,
+func make_fet_file(dbdata *w365tt.DbTopLevel,
 
 // activities []wzbase.Activity,
 // course2activities map[int][]int,
@@ -104,7 +106,7 @@ func make_fet_file(dbdata *db.DbTopLevel,
 	fmt.Printf("\n????? %+v\n", dbdata.Info)
 
 	// Build ref-index -> fet-key mapping
-	ref2fet := map[db.DbRef]string{}
+	ref2fet := map[Ref]string{}
 	for _, r := range dbdata.Subjects {
 		ref2fet[r.Id] = r.Tag
 	}
@@ -114,7 +116,7 @@ func make_fet_file(dbdata *db.DbTopLevel,
 	for _, r := range dbdata.Teachers {
 		ref2fet[r.Id] = r.Tag
 	}
-	ref2grouponly := map[db.DbRef]string{}
+	ref2grouponly := map[Ref]string{}
 	for _, r := range dbdata.Groups {
 		ref2grouponly[r.Id] = r.Tag
 	}

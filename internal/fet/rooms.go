@@ -52,7 +52,7 @@ func getRooms(fetinfo *fetInfo) {
 			Long_Name: n.Name,
 			Capacity:  30000,
 			Virtual:   false,
-			Comments:  getString(n.Reference),
+			Comments:  getString(n.Id),
 		})
 	}
 	fetinfo.fetdata.Rooms_List = fetRoomsList{
@@ -74,7 +74,7 @@ func addRoomConstraint(fetinfo *fetInfo,
 	room_choices *([]roomChoice),
 	virtual_rooms map[string]string,
 	activity_indexes []int,
-	roomspec []db.DbRef,
+	roomspec []Ref,
 ) {
 	if roomspec.UserInput != 0 {
 		log.Printf("WARNING: 'User-Input' rooms are not supported.")

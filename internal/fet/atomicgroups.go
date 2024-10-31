@@ -2,7 +2,6 @@ package fet
 
 import (
 	"fmt"
-	"gradgrind/INTERFACE_W365/internal/db"
 	"strings"
 )
 
@@ -13,14 +12,14 @@ import (
 // can be filtered on the basis of these marked groups.
 
 type AtomicGroup struct {
-	Class  db.DbRef
-	Groups []db.DbRef
+	Class  Ref
+	Groups []Ref
 	Tag    string
 }
 
 func makeAtomicGroups(fetinfo *fetInfo) {
 	// Mark the Groups used by Lessons.
-	markedGroups := map[db.DbRef]bool{}
+	markedGroups := map[Ref]bool{}
 	for _, l := range fetinfo.db.Lessons {
 		lc := l.Course
 		cix, ok := fetinfo.courses[lc]
@@ -32,14 +31,14 @@ func makeAtomicGroups(fetinfo *fetInfo) {
 		} else {
 			_, ok = fetinfo.supercourses[lc]
 			if !ok {
-				msg := fmt.Sprintf("#BUG# Lesson %d has invalid course.", l.Id)
+				msg := fmt.Sprintf("#BUG# Lesson %s has invalid course.", l.Id)
 				panic(msg)
 			}
 			// It is a supercourse, go through its subcourses.
 			for _, sub := range fetinfo.supersubs[lc] {
 				subix, ok := fetinfo.subcourses[sub]
 				if !ok {
-					msg := fmt.Sprintf("#BUG# subcourses[%d].", sub)
+					msg := fmt.Sprintf("#BUG# subcourses[%s].", sub)
 					panic(msg)
 				}
 				for _, g := range fetinfo.db.SubCourses[subix].Groups {
@@ -50,13 +49,13 @@ func makeAtomicGroups(fetinfo *fetInfo) {
 	}
 
 	// An atomic group is an ordered list of single groups from each division.
-	fetinfo.atomicgroups = map[db.DbRef][]AtomicGroup{}
+	fetinfo.atomicgroups = map[Ref][]AtomicGroup{}
 	// Go through the classes inspecting their Divisions. Retain only those
 	// which have lessons.
-	fetinfo.classdivisions = map[db.DbRef][][]db.DbRef{}
+	fetinfo.classdivisions = map[Ref][][]Ref{}
 	for _, cl := range fetinfo.db.Classes {
-		agi := [][]db.DbRef{{}}
-		divs := [][]db.DbRef{}
+		agi := [][]Ref{{}}
+		divs := [][]Ref{}
 		for _, d := range cl.Divisions {
 			dok := false
 			for _, g := range d.Groups {
@@ -67,11 +66,11 @@ func makeAtomicGroups(fetinfo *fetInfo) {
 			}
 			if dok {
 				divs = append(divs, d.Groups)
-				agix := [][]db.DbRef{}
+				agix := [][]Ref{}
 
 				for _, ag := range agi {
 					for _, g := range d.Groups {
-						gx := make([]db.DbRef, len(ag)+1)
+						gx := make([]Ref, len(ag)+1)
 						copy(gx, append(ag, g))
 						agix = append(agix, gx)
 					}
@@ -99,7 +98,7 @@ func makeAtomicGroups(fetinfo *fetInfo) {
 		}
 		//fmt.Printf("     ++> %+v\n", aglist)
 
-		g2ags := map[db.DbRef][]AtomicGroup{}
+		g2ags := map[Ref][]AtomicGroup{}
 		//		xg2ags := map[string][]string{}
 		i := len(divs)
 		n := 1
