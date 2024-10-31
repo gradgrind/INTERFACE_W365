@@ -47,12 +47,16 @@ type fet struct {
 }
 
 type fetInfo struct {
-	db               *w365tt.DbTopLevel
-	ref2fet          map[Ref]string
-	ref2grouponly    map[Ref]string
-	days             []string
-	hours            []string
-	fetdata          fet
+	db            *w365tt.DbTopLevel
+	ref2fet       map[Ref]string
+	ref2grouponly map[Ref]string
+	days          []string
+	hours         []string
+	fetdata       fet
+	superSubs     map[Ref][]Ref
+	courseGroups  map[Ref][]Ref
+
+	//TODO ... ???
 	courses          map[Ref]int
 	subcourses       map[Ref]int
 	supercourses     map[Ref]int
@@ -157,8 +161,11 @@ func make_fet_file(dbdata *w365tt.DbTopLevel,
 	getTeachers(&fetinfo)
 	getSubjects(&fetinfo)
 	getRooms(&fetinfo)
-	readCourseIndexes(&fetinfo)
-	makeAtomicGroups(&fetinfo)
+	fmt.Println("=====================================")
+	gatherCourseGroups(&fetinfo)
+
+	//readCourseIndexes(&fetinfo)
+	//makeAtomicGroups(&fetinfo)
 	/*
 		getClasses(&fetinfo)
 		getActivities(&fetinfo, activities, course2activities)

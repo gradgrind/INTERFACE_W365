@@ -1,10 +1,5 @@
 package fet
 
-import (
-	"fmt"
-	"strings"
-)
-
 // "Atomic Groups" are needed especially for the class handling.
 // They should only be built for divisions which have lessons.
 // So first the Lessons must be consulted for their Courses
@@ -17,7 +12,114 @@ type AtomicGroup struct {
 	Tag    string
 }
 
-func makeAtomicGroups(fetinfo *fetInfo) {
+/*
+func addUsedGroups(
+	db *w365tt.DbTopLevel,
+	usedgroups map[Ref]bool,
+	glist []w365tt.Ref,
+) {
+	for _, gref := range glist {
+		g := db.Elements[gref]
+		_, ok := g.(w365tt.Group)
+		if ok {
+			usedgroups[gref] = true
+		}
+	}
+}
+
+// TODO: The SubCourses are needed, but SuperCourses may be provided ...
+func filterDivisions(fetinfo *fetInfo) map[Ref][][]Ref {
+	// Prepare filtered versions of the class Divisions containing only
+	// those Divisions which have Groups used in Lessons.
+
+	db := fetinfo.db
+
+	// Collect groups used in Lessons.
+	usedgroups := map[Ref]bool{}
+	for _, l := range db.Lessons {
+		c := db.Elements[l.Course]
+		cnode, ok := c.(w365tt.Course)
+		if ok {
+			addUsedGroups(db, usedgroups, cnode.Groups)
+			continue
+		}
+		subclist, ok := fetinfo.supersubs[l.Course]
+		if ok {
+			// It is a SuperCourse, go through its SubCourses.
+			for _, sbref := range subclist {
+				sbc := db.Elements[sbref]
+
+			}
+
+		}
+		// It is a supercourse, go through its subcourses.
+		for _, sub := range fetinfo.supersubs[lc] {
+			subix, ok := fetinfo.subcourses[sub]
+			if !ok {
+				msg := fmt.Sprintf("#BUG# subcourses[%s].", sub)
+				panic(msg)
+			}
+			for _, g := range fetinfo.db.SubCourses[subix].Groups {
+				markedGroups[g] = true
+			}
+
+			glist := c.(w365tt.CourseInterface).GetGroups()
+			for _, gref := range glist {
+				g := db.Elements[gref]
+				_, ok := g.(w365tt.Group)
+				if ok {
+					usedgroups[gref] = true
+				}
+			}
+		}
+
+		for _, l := range db.Lessons {
+			lc := l.Course
+			_, ok := fetinfo.courses[lc]
+			if ok {
+				// It is a normal course.
+				for _, g := range fetinfo.db.Courses[cix].Groups {
+					markedGroups[g] = true
+				}
+			} else {
+				_, ok = fetinfo.supercourses[lc]
+				if !ok {
+					msg := fmt.Sprintf("#BUG# Lesson %s has invalid course.", l.Id)
+					panic(msg)
+				}
+				// It is a supercourse, go through its subcourses.
+				for _, sub := range fetinfo.supersubs[lc] {
+					subix, ok := fetinfo.subcourses[sub]
+					if !ok {
+						msg := fmt.Sprintf("#BUG# subcourses[%s].", sub)
+						panic(msg)
+					}
+					for _, g := range fetinfo.db.SubCourses[subix].Groups {
+						markedGroups[g] = true
+					}
+				}
+			}
+		}
+
+		// Filter the class divisions, discarding the division names.
+		cdivs := map[Ref][][]Ref{}
+		for _, c := range db.Classes {
+			divs := [][]Ref{}
+			for _, div := range c.Divisions {
+				for _, gref := range div.Groups {
+					if usedgroups[gref] {
+						divs = append(divs, div.Groups)
+						break
+					}
+				}
+			}
+			cdivs[c.Id] = divs
+		}
+		return cdivs
+	}
+}
+
+func makeAtomicGroups(divmap map[Ref][][]Ref) {
 	// Mark the Groups used by Lessons.
 	markedGroups := map[Ref]bool{}
 	for _, l := range fetinfo.db.Lessons {
@@ -110,8 +212,8 @@ func makeAtomicGroups(fetinfo *fetInfo) {
 				for _, g := range divs[i] {
 					for j := 0; j < n; j++ {
 						g2ags[g] = append(g2ags[g], aglist[a])
-						//						xg2ags[fetinfo.ref2fet[g]] = append(
-						//							xg2ags[fetinfo.ref2fet[g]], aglist[a])
+						//	g2ags[fetinfo.ref2fet[g]] = append(
+						//	    xg2ags[fetinfo.ref2fet[g]], aglist[a])
 						a++
 					}
 				}
@@ -156,3 +258,4 @@ func printAtomicGroups(fetinfo *fetInfo) {
 		}
 	}
 }
+*/
