@@ -28,12 +28,6 @@ func ReadJSON(jsonpath string) *DbTopLevel {
 	return &v
 }
 
-func defaultMinus1(v *interface{}) {
-	if (*v) == nil {
-		*v = -1
-	}
-}
-
 func LoadJSON(jsonpath string) *DbTopLevel {
 	dbdata := ReadJSON(jsonpath)
 	dbdata.checkDb()
@@ -53,12 +47,7 @@ func LoadJSON(jsonpath string) *DbTopLevel {
 	dbdata.readCourses()
 	dbdata.readSuperCourses()
 	dbdata.readSubCourses()
-
-	/*
-
-		dbdata.addLessons()
-	*/
-
+	dbdata.readLessons()
 	return dbdata
 }
 

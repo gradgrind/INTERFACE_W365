@@ -119,12 +119,12 @@ func (dbp *DbTopLevel) readRoomChoiceGroups() {
 	}
 }
 
-func (dbp *DbTopLevel) makeRoomChoiceGroup(groups []Ref) (Ref, string) {
+func (dbp *DbTopLevel) makeRoomChoiceGroup(rooms []Ref) (Ref, string) {
 	erlist := []string{} // Error messages
 	// Collect the Ids and Tags of the component rooms.
 	taglist := []string{}
 	reflist := []Ref{}
-	for _, rref := range groups {
+	for _, rref := range rooms {
 		r, ok := dbp.Elements[rref]
 		if ok {
 			rm, ok := r.(*Room)
