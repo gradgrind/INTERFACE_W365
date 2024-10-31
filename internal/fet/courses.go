@@ -12,8 +12,8 @@ func gatherCourseGroups(fetinfo *fetInfo) {
 	// Also, the SuperCourses (with lessons) get list of their
 	// SubCourses.
 	db := fetinfo.db
-	fetinfo.superSubs = make(map[w365tt.Ref][]w365tt.Ref)
-	fetinfo.courseGroups = make(map[w365tt.Ref][]w365tt.Ref)
+	fetinfo.superSubs = make(map[Ref][]Ref)
+	fetinfo.courseGroups = make(map[Ref][]Ref)
 	// Collect Courses with Lessons.
 	for _, l := range db.Lessons {
 		lcref := l.Course
@@ -28,8 +28,8 @@ func gatherCourseGroups(fetinfo *fetInfo) {
 		} else {
 			_, ok = c.(*w365tt.SuperCourse)
 			if ok {
-				fetinfo.superSubs[lcref] = []w365tt.Ref{}
-				fetinfo.courseGroups[lcref] = []w365tt.Ref{}
+				fetinfo.superSubs[lcref] = []Ref{}
+				fetinfo.courseGroups[lcref] = []Ref{}
 				continue
 			}
 			log.Fatalf(
@@ -47,7 +47,7 @@ func gatherCourseGroups(fetinfo *fetInfo) {
 			cglist := append(fetinfo.courseGroups[spc], sbc.Groups...)
 			slices.Sort(cglist)
 			cglist = slices.Compact(cglist)
-			cglx := make([]w365tt.Ref, len(cglist))
+			cglx := make([]Ref, len(cglist))
 			copy(cglx, cglist)
 			fetinfo.courseGroups[spc] = cglx
 		}

@@ -53,16 +53,16 @@ type fetInfo struct {
 	days          []string
 	hours         []string
 	fetdata       fet
-	// These cover only courses with lessons:
-	superSubs    map[Ref][]Ref
-	courseGroups map[Ref][]Ref
+	// These cover only courses and groups with lessons:
+	superSubs      map[Ref][]Ref
+	courseGroups   map[Ref][]Ref
+	classDivisions map[Ref][][]Ref
 
 	//TODO ... ???
 	courses          map[Ref]int
 	subcourses       map[Ref]int
 	supercourses     map[Ref]int
 	supersubs        map[Ref][]Ref
-	classdivisions   map[Ref][][]Ref
 	atomicgroups     map[Ref][]AtomicGroup
 	fixed_activities []bool
 }
@@ -166,7 +166,7 @@ func make_fet_file(dbdata *w365tt.DbTopLevel,
 	gatherCourseGroups(&fetinfo)
 
 	//readCourseIndexes(&fetinfo)
-	//makeAtomicGroups(&fetinfo)
+	makeAtomicGroups(&fetinfo)
 	/*
 		getClasses(&fetinfo)
 		getActivities(&fetinfo, activities, course2activities)
