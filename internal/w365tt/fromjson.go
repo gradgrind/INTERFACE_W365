@@ -51,12 +51,11 @@ func LoadJSON(jsonpath string) *DbTopLevel {
 	dbdata.checkRoomGroups()
 	dbdata.readClasses()
 	dbdata.readCourses()
+	dbdata.readSuperCourses()
+	dbdata.readSubCourses()
 
 	/*
 
-		dbdata.addCourses()
-		dbdata.addSuperCourses()
-		dbdata.addSubCourses()
 		dbdata.addLessons()
 	*/
 
