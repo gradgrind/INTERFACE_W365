@@ -19,6 +19,7 @@ For dealing with timetables only a fraction of the total database is necessary. 
  - Courses and the lessons which belong to them
  - A multitude of diverse constraints which determine where the lessons may be placed
 
-Internally, in Waldorf 365, each of these items is in principle an object. In some cases, information is included within an object although it could be regarded as a separate object. This is done particularly with information which is tied very closely to the object in which it is embedded. If it has a sufficiently simple structure, it can make sense to do it like this.
+Internally, in Waldorf 365, each of these items is in principle an object. 
+Some of these objects provide information pertinent to only one object belonging to the above types. If more hierarchy is allowed in the data format, it might make sense to represent this information as fields in the corresponding object. Examples would be "Absences" and "GradePartitions".
 
 A first suggestion for an interface format can be found (in German) in [this document](stundenplanschnittstelle.md).

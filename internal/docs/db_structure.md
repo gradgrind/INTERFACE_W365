@@ -1,3 +1,8 @@
+# Current Database Structure
+
+Date: 31.10.2024
+
+```
 package db
 
 // The structures used for the "database"
@@ -149,3 +154,4 @@ type DbTopLevel struct {
 	Lessons          []Lesson
 	Constraints      map[string]interface{}
 }
+```
