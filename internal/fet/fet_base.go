@@ -53,8 +53,9 @@ type fetInfo struct {
 	days          []string
 	hours         []string
 	fetdata       fet
-	superSubs     map[Ref][]Ref
-	courseGroups  map[Ref][]Ref
+	// These cover only courses with lessons:
+	superSubs    map[Ref][]Ref
+	courseGroups map[Ref][]Ref
 
 	//TODO ... ???
 	courses          map[Ref]int

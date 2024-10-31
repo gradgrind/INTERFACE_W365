@@ -7,6 +7,10 @@ import (
 )
 
 func gatherCourseGroups(fetinfo *fetInfo) {
+	// Gather the Groups for the Courses and SuperCourses with
+	// lessons (only).
+	// Also, the SuperCourses (with lessons) get list of their
+	// SubCourses.
 	db := fetinfo.db
 	fetinfo.superSubs = make(map[w365tt.Ref][]w365tt.Ref)
 	fetinfo.courseGroups = make(map[w365tt.Ref][]w365tt.Ref)
