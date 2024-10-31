@@ -307,33 +307,33 @@ func (db *DbTopLevel) checkDb() {
 
 // Interface for Course and SubCourse elements
 type CourseInterface interface {
-	getId() Ref
-	getGroups() []Ref
-	getTeachers() []Ref
-	getSubject() Ref
-	getSubjects() []Ref
-	getPreferredRooms() []Ref
-	getRoom() Ref
+	GetId() Ref
+	GetGroups() []Ref
+	GetTeachers() []Ref
+	GetSubject() Ref
+	getSubjects() []Ref       // not available externally
+	getPreferredRooms() []Ref // not available externally
+	GetRoom() Ref
 	setSubject(Ref)
 	setSubjects([]Ref)
 	setPreferredRooms([]Ref)
 	setRoom(Ref)
 }
 
-func (c *Course) getId() Ref                    { return c.Id }
-func (c *SubCourse) getId() Ref                 { return c.Id }
-func (c *Course) getGroups() []Ref              { return c.Groups }
-func (c *SubCourse) getGroups() []Ref           { return c.Groups }
-func (c *Course) getTeachers() []Ref            { return c.Teachers }
-func (c *SubCourse) getTeachers() []Ref         { return c.Teachers }
-func (c *Course) getSubject() Ref               { return c.Subject }
-func (c *SubCourse) getSubject() Ref            { return c.Subject }
+func (c *Course) GetId() Ref                    { return c.Id }
+func (c *SubCourse) GetId() Ref                 { return c.Id }
+func (c *Course) GetGroups() []Ref              { return c.Groups }
+func (c *SubCourse) GetGroups() []Ref           { return c.Groups }
+func (c *Course) GetTeachers() []Ref            { return c.Teachers }
+func (c *SubCourse) GetTeachers() []Ref         { return c.Teachers }
+func (c *Course) GetSubject() Ref               { return c.Subject }
+func (c *SubCourse) GetSubject() Ref            { return c.Subject }
 func (c *Course) getSubjects() []Ref            { return c.Subjects }
 func (c *SubCourse) getSubjects() []Ref         { return c.Subjects }
 func (c *Course) getPreferredRooms() []Ref      { return c.PreferredRooms }
 func (c *SubCourse) getPreferredRooms() []Ref   { return c.PreferredRooms }
-func (c *Course) getRoom() Ref                  { return c.Room }
-func (c *SubCourse) getRoom() Ref               { return c.Room }
+func (c *Course) GetRoom() Ref                  { return c.Room }
+func (c *SubCourse) GetRoom() Ref               { return c.Room }
 func (c *Course) setSubject(r Ref)              { c.Subject = r }
 func (c *SubCourse) setSubject(r Ref)           { c.Subject = r }
 func (c *Course) setSubjects(rr []Ref)          { c.Subjects = rr }

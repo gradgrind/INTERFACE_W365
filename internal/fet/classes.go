@@ -2,6 +2,7 @@ package fet
 
 import (
 	"encoding/xml"
+	"gradgrind/INTERFACE_W365/internal/w365tt"
 )
 
 const GROUP_SEP = ","
@@ -56,12 +57,47 @@ type studentsNotAvailable struct {
 	Active                        bool
 }
 
+func filterDivisions(db *w365tt.DbTopLevel) map[Ref][][]Ref {
+	// Prepare filtered versions of the class Divisions containing only
+	// those Divisions which have Groups used in Lessons.
+
+	// Collect groups used in Lessons.
+	usedgroups := map[Ref]bool{}
+	for _, l := range db.Lessons {
+		cref := l.Course
+		c := db.Elements[cref]
+		glist := c.(w365tt.CourseInterface).GetGroups()
+		for _, gref := range glist {
+			g := db.Elements[gref]
+			_, ok := g.(w365tt.Group)
+			if ok {
+				usedgroups[gref] = true
+			}
+		}
+	}
+	// Filter the class divisions, discarding the division names.
+	cdivs := map[Ref][][]Ref{}
+	for _, c := range db.Classes {
+		divs := [][]Ref{}
+		for _, div := range c.Divisions {
+			for _, gref := range div.Groups {
+				if usedgroups[gref] {
+					divs = append(divs, div.Groups)
+					break
+				}
+			}
+		}
+		cdivs[c.Id] = divs
+	}
+	return cdivs
+}
+
 /*TODO
 
-// Note that any class divisions with no actual lessons should not appear
-// in the atomic groups. This is handled before calling this function so
-// that wzdb.AtomicGroups covers only these "active" divisions.
 func getClasses(fetinfo *fetInfo) {
+	// Note that any class divisions with no actual lessons should not appear
+	// in the atomic groups. This is handled by calling filterDivisions.
+	cl2db := filterDivisions(fetinfo.db)
 	//	trefs := wzdb.TableMap["CLASSES"]
 	items := []fetClass{}
 	natimes := []studentsNotAvailable{}
