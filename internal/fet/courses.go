@@ -54,7 +54,7 @@ func gatherCourseGroups(fetinfo *fetInfo) {
 	}
 }
 
-// TODO-- Deprecated?
+/* TODO-- Deprecated?
 func readCourseIndexes(fetinfo *fetInfo) {
 	courses := map[Ref]int{}
 	for i, c := range fetinfo.db.Courses {
@@ -76,3 +76,4 @@ func readCourseIndexes(fetinfo *fetInfo) {
 	fetinfo.subcourses = subcourses
 	fetinfo.supersubs = supersubs
 }
+*/

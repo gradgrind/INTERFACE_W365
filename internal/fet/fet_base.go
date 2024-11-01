@@ -57,14 +57,13 @@ type fetInfo struct {
 	superSubs      map[Ref][]Ref
 	courseGroups   map[Ref][]Ref
 	classDivisions map[Ref][][]Ref
+	atomicGroups   map[Ref][]AtomicGroup
 
 	//TODO ... ???
-	courses          map[Ref]int
-	subcourses       map[Ref]int
-	supercourses     map[Ref]int
-	supersubs        map[Ref][]Ref
-	atomicgroups     map[Ref][]AtomicGroup
-	fixed_activities []bool
+	//courses          map[Ref]int
+	//subcourses       map[Ref]int
+	//supercourses     map[Ref]int
+	//fixed_activities []bool
 }
 
 type timeConstraints struct {
@@ -108,7 +107,7 @@ func make_fet_file(dbdata *w365tt.DbTopLevel,
 // subject_activities []wzbase.SubjectGroupActivities,
 ) string {
 	//TODO--
-	fmt.Printf("\n????? %+v\n", dbdata.Info)
+	//fmt.Printf("\n????? %+v\n", dbdata.Info)
 
 	// Build ref-index -> fet-key mapping
 	ref2fet := map[Ref]string{}
@@ -135,7 +134,7 @@ func make_fet_file(dbdata *w365tt.DbTopLevel,
 		}
 	}
 
-	fmt.Printf("ref2fet: %v\n", ref2fet)
+	//fmt.Printf("ref2fet: %v\n", ref2fet)
 
 	fetinfo := fetInfo{
 		db:            dbdata,
@@ -169,9 +168,9 @@ func make_fet_file(dbdata *w365tt.DbTopLevel,
 	makeAtomicGroups(&fetinfo)
 	//fmt.Println("\n +++++++++++++++++++++++++++")
 	//printAtomicGroups(&fetinfo)
+	getClasses(&fetinfo)
 
 	/*
-		getClasses(&fetinfo)
 		getActivities(&fetinfo, activities, course2activities)
 		gap_subject_activities(&fetinfo, subject_activities)
 	*/

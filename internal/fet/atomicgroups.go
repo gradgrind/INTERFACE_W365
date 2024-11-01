@@ -49,7 +49,7 @@ func filterDivisions(fetinfo *fetInfo) {
 
 func makeAtomicGroups(fetinfo *fetInfo) {
 	// An atomic group is an ordered list of single groups from each division.
-	fetinfo.atomicgroups = map[Ref][]AtomicGroup{}
+	fetinfo.atomicGroups = map[Ref][]AtomicGroup{}
 	// Go through the classes inspecting their Divisions. Retain only those
 	// which have lessons.
 	filterDivisions(fetinfo) // -> fetinfo.classDivisions
@@ -115,12 +115,12 @@ func makeAtomicGroups(fetinfo *fetInfo) {
 			count *= len(divGroups)
 		}
 		if len(divs) != 0 {
-			fetinfo.atomicgroups[cl.Id] = aglist
+			fetinfo.atomicGroups[cl.Id] = aglist
 			for g, agl := range g2ags {
-				fetinfo.atomicgroups[g] = agl
+				fetinfo.atomicGroups[g] = agl
 			}
 		} else {
-			fetinfo.atomicgroups[cl.Id] = []AtomicGroup{}
+			fetinfo.atomicGroups[cl.Id] = []AtomicGroup{}
 		}
 	}
 }
@@ -128,14 +128,14 @@ func makeAtomicGroups(fetinfo *fetInfo) {
 func printAtomicGroups(fetinfo *fetInfo) {
 	for _, cl := range fetinfo.db.Classes {
 		agls := []string{}
-		for _, ag := range fetinfo.atomicgroups[cl.Id] {
+		for _, ag := range fetinfo.atomicGroups[cl.Id] {
 			agls = append(agls, ag.Tag)
 		}
 		fmt.Printf("  ++ %s: %+v\n", fetinfo.ref2fet[cl.Id], agls)
 		for _, div := range fetinfo.classDivisions[cl.Id] {
 			for _, g := range div {
 				agls := []string{}
-				for _, ag := range fetinfo.atomicgroups[g] {
+				for _, ag := range fetinfo.atomicGroups[g] {
 					agls = append(agls, ag.Tag)
 				}
 				fmt.Printf("    -- %s: %+v\n", fetinfo.ref2fet[g], agls)
