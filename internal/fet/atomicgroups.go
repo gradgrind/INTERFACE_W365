@@ -80,74 +80,48 @@ func makeAtomicGroups(fetinfo *fetInfo) {
 		//fmt.Printf("  §§§ Divisions in %s: %+v\n", cl.Tag, divs)
 		//fmt.Printf("     --> %+v\n", agrefs)
 
-		for _, cl := range fetinfo.db.Classes {
-			divs, ok := fetinfo.classDivisions[cl.Id]
-			if !ok {
-				log.Fatalf("*ERROR* fetinfo.classDivisions[%s]\n", cl.Id)
+		// Make AtomicGroups
+		aglist := []AtomicGroup{}
+		for _, ag := range agrefs {
+			glist := []string{}
+			for _, gref := range ag {
+				glist = append(glist, fetinfo.ref2grouponly[gref])
 			}
-			// Make AtomicGroups
-			aglist := []AtomicGroup{}
-			for _, ag := range agrefs {
-				glist := []string{}
-				for _, gref := range ag {
-					glist = append(glist, fetinfo.ref2grouponly[gref])
-				}
-				ago := AtomicGroup{
-					Class:  cl.Id,
-					Groups: ag,
-					Tag: fmt.Sprintf(
-						"%s#%s", cl.Tag, strings.Join(glist, "~")),
-				}
-				aglist = append(aglist, ago)
+			ago := AtomicGroup{
+				Class:  cl.Id,
+				Groups: ag,
+				Tag: fmt.Sprintf(
+					"%s#%s", cl.Tag, strings.Join(glist, "~")),
 			}
-
-			fmt.Printf("   %s ++> %+v\n", cl.Tag, aglist)
-
-			// Map the individual groups to their atomic groups.
-			g2ags := map[Ref][]AtomicGroup{}
-			//		xg2ags := map[string][]string{}
-			i := len(divs)
-			n := 1
-			for i > 0 {
-				i--
-				a := 0 // ag index
-
-				for a < len(aglist) {
-					for x, g := range divs[i] {
-						for j := 0; j < n; j++ {
-
-							fmt.Printf(" ????? cl=%s, a=%d, i=%d, x=%d, j=%d\n",
-								cl.Tag, a, i, x, j)
-							fmt.Printf("   -- agl=%d, xl=%d, n=%d\n",
-								len(aglist), len(divs), n)
-
-							g2ags[g] = append(g2ags[g], aglist[a])
-							//	g2ags[fetinfo.ref2fet[g]] = append(
-							//	    xg2ags[fetinfo.ref2fet[g]], aglist[a])
-							a++
-						}
-					}
-				}
-
-				n *= len(divs[i])
-			}
-			//fmt.Printf("     ++> %+v\n", xg2ags)
-			if len(divs) != 0 {
-				fetinfo.atomicgroups[cl.Id] = aglist
-				for g, agl := range g2ags {
-					agls := []string{}
-					for _, ag := range agl {
-						agls = append(agls, ag.Tag)
-					}
-					//fmt.Printf("     ++ %s: %+v\n", fetinfo.ref2fet[g], agls)
-					fetinfo.atomicgroups[g] = agl
-				}
-			} else {
-				fetinfo.atomicgroups[cl.Id] = []AtomicGroup{}
-			}
+			aglist = append(aglist, ago)
 		}
-		//fmt.Println("\n +++++++++++++++++++++++++++")
-		//printAtomicGroups(fetinfo)
+
+		// Map the individual groups to their atomic groups.
+		g2ags := map[Ref][]AtomicGroup{}
+		count := 1
+		divIndex := len(divs)
+		for divIndex > 0 {
+			divIndex--
+			divGroups := divs[divIndex]
+			agi := 0 // ag index
+			for agi < len(aglist) {
+				for _, g := range divGroups {
+					for j := 0; j < count; j++ {
+						g2ags[g] = append(g2ags[g], aglist[agi])
+						agi++
+					}
+				}
+			}
+			count *= len(divGroups)
+		}
+		if len(divs) != 0 {
+			fetinfo.atomicgroups[cl.Id] = aglist
+			for g, agl := range g2ags {
+				fetinfo.atomicgroups[g] = agl
+			}
+		} else {
+			fetinfo.atomicgroups[cl.Id] = []AtomicGroup{}
+		}
 	}
 }
 

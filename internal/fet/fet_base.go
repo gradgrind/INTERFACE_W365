@@ -167,6 +167,9 @@ func make_fet_file(dbdata *w365tt.DbTopLevel,
 
 	//readCourseIndexes(&fetinfo)
 	makeAtomicGroups(&fetinfo)
+	//fmt.Println("\n +++++++++++++++++++++++++++")
+	//printAtomicGroups(&fetinfo)
+
 	/*
 		getClasses(&fetinfo)
 		getActivities(&fetinfo, activities, course2activities)
