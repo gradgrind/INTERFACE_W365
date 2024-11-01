@@ -3,6 +3,7 @@ package fet
 import (
 	"encoding/xml"
 	"fmt"
+	"log"
 )
 
 // const GROUP_SEP = ","
@@ -84,15 +85,46 @@ func getClasses(fetinfo *fetInfo) {
 		//}
 		//calt := cl.SORTING //?
 		cname := cl.Tag
+
+		//TODO??
 		clAGs := fetinfo.atomicGroups[cl.Id]
 		fmt.Printf("##### cags %s: %+v\n", cname, clAGs)
+		if len(clAGs) == 1 {
+			log.Fatalf(
+				"Class %s has ONE atomic group:\n  %+v\n", cname, clAGs[0])
+		}
+		if len(clAGs) > 1 {
+			// Class with divisions
+		}
+		divs, ok := fetinfo.classDivisions[cl.Id]
+		if !ok {
+			log.Fatalf(
+				"Class %s has no entry in fetinfo.classDivisions\n", cname)
+		}
 
+		// Construct the Groups and Subgroups
+		groups := []fetGroup{}
+		for _, div := range divs {
+			for _, gref := range div {
+				g := fetinfo.ref2fet[gref]
+				subgroups := []fetSubgroup{}
+				ags := fetinfo.atomicGroups[gref]
+				for _, ag := range ags {
+					subgroups = append(subgroups,
+						fetSubgroup{Name: ag.Tag},
+					)
+				}
+				groups = append(groups, fetGroup{
+					Name:     g,
+					Subgroup: subgroups,
+				})
+			}
+		}
 	}
 	return
 	/*
 		for {
 
-			groups := []fetGroup{}
 			if cags.GetCardinality() > 1 {
 				for _, cg := range cgs {
 					g := fetinfo.ref2fet[cg.GIX]
