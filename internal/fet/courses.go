@@ -193,6 +193,7 @@ func getActivities(fetinfo *fetInfo) {
 	}
 	// ************* Now the activities
 	activities := []fetActivity{}
+	roomChoices := []roomChoice{}
 	lessonList := []*w365tt.Lesson{{}} // with empty first entry, because
 	// Activity Ids start at 1
 	aid := 0
@@ -226,8 +227,10 @@ func getActivities(fetinfo *fetInfo) {
 			llist = append(llist, l)
 			totalDuration += l.Duration
 		}
+		aidlist := []int{}
 		for _, l := range llist {
 			aid++
+			aidlist = append(aidlist, aid)
 			activities = append(activities,
 				fetActivity{
 					Id:       aid,
@@ -244,12 +247,15 @@ func getActivities(fetinfo *fetInfo) {
 			)
 			lessonList = append(lessonList, l)
 		}
+		addRoomConstraint(fetinfo, &roomChoices, aidlist, cinfo.room)
 	}
 	fetinfo.fetdata.Activities_List = fetActivitiesList{
 		Activity: activities,
 	}
+	fetinfo.fetdata.Space_Constraints_List.
+		ConstraintActivityPreferredRooms = roomChoices
 
-	/*TODO: Deal with room constraints
+	/*TODO: Deal with fixed lesson and ficed room constraints
 
 	fixed_rooms := []fixedRoom{}
 	room_choices := []roomChoice{}

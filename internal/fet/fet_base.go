@@ -164,6 +164,7 @@ func make_fet_file(dbdata *w365tt.DbTopLevel,
 					Weight_Percentage: 100, Active: true},
 			},
 		},
+		fetVirtualRooms: map[string]string{},
 	}
 
 	getDays(&fetinfo)
