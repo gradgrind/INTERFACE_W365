@@ -2,8 +2,8 @@ package fet
 
 import (
 	"encoding/xml"
-	"fmt"
 	"log"
+	"strings"
 )
 
 // const GROUP_SEP = ","
@@ -63,43 +63,19 @@ type studentsNotAvailable struct {
 //TODO
 
 func getClasses(fetinfo *fetInfo) {
-	//items := []fetClass{}
-	//natimes := []studentsNotAvailable{}
-	//lunchperiods := fetinfo.db.Info.MiddayBreak
+	items := []fetClass{}
+	natimes := []studentsNotAvailable{}
+	lunchperiods := fetinfo.db.Info.MiddayBreak
 	//lunchconstraints := []lunchBreak{}
 	//maxgaps := []maxGapsPerWeek{}
 	//minlessons := []minLessonsPerDay{}
 	for _, cl := range fetinfo.db.Classes {
-		//TODO
-		//cgs := fetinfo.wzdb.AtomicGroups.Class_Groups[c]
-		//agmap := fetinfo.wzdb.AtomicGroups.Group_Atomics
-		//cags := agmap[wzbase.ClassGroup{
-		//	CIX: c, GIX: 0,
-		//}]
-
-		//		divs := cl.DIVISIONS
-		//nc := 0
-		//		if len(divs) > 0 {
-		//if cags.GetCardinality() > 1 {
-		//	nc = 1
-		//}
-		//calt := cl.SORTING //?
 		cname := cl.Tag
-
-		//TODO??
-		clAGs := fetinfo.atomicGroups[cl.Id]
-		fmt.Printf("##### cags %s: %+v\n", cname, clAGs)
-		if len(clAGs) == 1 {
-			log.Fatalf(
-				"Class %s has ONE atomic group:\n  %+v\n", cname, clAGs[0])
-		}
-		if len(clAGs) > 1 {
-			// Class with divisions
-		}
 		divs, ok := fetinfo.classDivisions[cl.Id]
 		if !ok {
 			log.Fatalf(
-				"Class %s has no entry in fetinfo.classDivisions\n", cname)
+				"*BUG* Class %s has no entry in fetinfo.classDivisions\n",
+				cname)
 		}
 
 		// Construct the Groups and Subgroups
@@ -120,102 +96,90 @@ func getClasses(fetinfo *fetInfo) {
 				})
 			}
 		}
-	}
-	return
-	/*
-		for {
 
-			if cags.GetCardinality() > 1 {
-				for _, cg := range cgs {
-					g := fetinfo.ref2fet[cg.GIX]
-					gags := agmap[cg]
-					subgroups := []fetSubgroup{}
-					for _, ag := range gags.ToArray() {
-						subgroups = append(subgroups,
-							fetSubgroup{Name: fmt.Sprintf("%s.%03d", cname, ag)},
-						)
-						//ag_gs[int(ag)] = append(ag_gs[int(ag)], g)
-					}
-					groups = append(groups, fetGroup{
-						Name:     fmt.Sprintf("%s.%s", cname, g),
-						Subgroup: subgroups,
-					})
-				}
+		// Construct the "Categories" (divisions)
+		categories := []fetCategory{}
+		for _, divl := range divs {
+			strcum := []string{}
+			for _, i := range divl {
+				strcum = append(strcum, fetinfo.ref2grouponly[i])
 			}
-
-			// Use the Comments field as an additional specification of the
-			// partitioning.
-			slcum := []string{}
-			active_divisions := fetinfo.wzdb.ActiveDivisions[c]
-			categories := []fetCategory{}
-			for _, divl := range active_divisions {
-				strcum := []string{}
-				for _, i := range divl {
-					strcum = append(strcum, fetinfo.ref2fet[i])
-				}
-				categories = append(categories, fetCategory{
-					Number_of_Divisions: len(divl),
-					Division:            strcum,
-				})
-				slcum = append(slcum, strings.Join(strcum, GROUP_SEP))
-			}
-			strdivs := strings.Join(slcum, DIV_SEP)
-			//fmt.Printf("??? ActiveDivisions %s (%s): %+v\n",
-			//	cname, cl.SORTING, strdivs)
-			items = append(items, fetClass{
-				Name:                 cname,
-				Long_Name:            cl.NAME,
-				Comments:             strdivs,
-				Separator:            ".",
-				Number_of_Categories: len(categories),
-				Category:             categories,
-				Group:                groups,
+			categories = append(categories, fetCategory{
+				Number_of_Divisions: len(divl),
+				Division:            strcum,
 			})
+		}
+		items = append(items, fetClass{
+			Name:                 cname,
+			Long_Name:            cl.Name,
+			Separator:            CLASS_GROUP_SEP,
+			Number_of_Categories: len(categories),
+			Category:             categories,
+			Group:                groups,
+		})
+
+		// The following constraints don't concern dummy classes ending
+		// in "X".
+		if strings.HasSuffix(cname, "X") {
+			continue
+		}
+
+		// "Not available" times.
+		// Seek also the days where a lunch-break is necessary – those days
+		// where none of the lunch-break periods are blocked.
+		lbdays := []int{} // list of days with lunch break
+		nats := []notAvailableTime{}
+		day := 0
+		lbd := true // day has lunch break?
+		for _, na := range cl.NotAvailable {
+			if na.Day != day {
+				if na.Day < day {
+					log.Fatalf(
+						"Class %s has unordered NotAvailable times.\n",
+						cname)
+				}
+				if lbd {
+					lbdays = append(lbdays, day)
+				} else {
+					lbd = true
+				}
+				day = na.Day
+			}
+
+			if lbd {
+				for _, hh := range lunchperiods {
+					if hh == na.Hour {
+						lbd = false
+						break
+					}
+				}
+			}
+			nats = append(nats,
+				notAvailableTime{
+					Day: fetinfo.days[day], Hour: fetinfo.hours[na.Hour]})
+		}
+		if len(nats) > 0 {
+			natimes = append(natimes,
+				studentsNotAvailable{
+					Weight_Percentage:             100,
+					Students:                      cname,
+					Number_of_Not_Available_Times: len(nats),
+					Not_Available_Time:            nats,
+					Active:                        true,
+				})
+		}
+
+	}
+	fetinfo.fetdata.Students_List = fetStudentsList{Year: items}
+	fetinfo.fetdata.Time_Constraints_List.
+		ConstraintStudentsSetNotAvailableTimes = natimes
+
+	//TODO: Further constraints
+
+	/*
 
 			//fmt.Printf("\nCLASS %s: %+v\n", cl.SORTING, cl.DIVISIONS)
 
-			// ************************************************************
-			// The following constraints don't concern dummy classes ending
-			// in "X".
-			if strings.HasSuffix(cname, "X") {
-				continue
-			}
-
-			// "Not available" times
-			// Seek also the days where a lunch-break is necessary – those days
-			// where none of the lunch-break periods are blocked.
-			lbdays := []int{}
-			nats := []notAvailableTime{}
-			for d, dna := range cl.NOT_AVAILABLE {
-				lbd := true
-				for _, h := range dna {
-					if lbd {
-						for _, hh := range lunchperiods {
-							if hh == h {
-								lbd = false
-								break
-							}
-						}
-					}
-					nats = append(nats,
-						notAvailableTime{
-							Day: fetinfo.days[d], Hour: fetinfo.hours[h]})
-				}
-				if lbd {
-					lbdays = append(lbdays, d)
-				}
-			}
-
-			if len(nats) > 0 {
-				natimes = append(natimes,
-					studentsNotAvailable{
-						Weight_Percentage:             100,
-						Students:                      cname,
-						Number_of_Not_Available_Times: len(nats),
-						Not_Available_Time:            nats,
-						Active:                        true,
-					})
-			}
 			//fmt.Printf("==== %s: %+v\n", cname, nats)
 
 			// Limit gaps on a weekly basis.
@@ -254,11 +218,6 @@ func getClasses(fetinfo *fetInfo) {
 				Active:              true,
 			})
 		}
-		fetinfo.fetdata.Students_List = fetStudentsList{
-			Year: items,
-		}
-		fetinfo.fetdata.Time_Constraints_List.
-			ConstraintStudentsSetNotAvailableTimes = natimes
 		fetinfo.fetdata.Time_Constraints_List.
 			ConstraintStudentsSetMaxHoursDailyInInterval = lunchconstraints
 		fetinfo.fetdata.Time_Constraints_List.

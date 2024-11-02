@@ -36,8 +36,8 @@ type fet struct {
 	Teachers_List    fetTeachersList
 	Subjects_List    fetSubjectsList
 	Rooms_List       fetRoomsList
+	Students_List    fetStudentsList
 	/*
-		Students_List    fetStudentsList
 		//Buildings_List
 		Activity_Tags_List     fetActivityTags
 		Activities_List        fetActivitiesList
@@ -69,8 +69,8 @@ type fetInfo struct {
 type timeConstraints struct {
 	XMLName xml.Name `xml:"Time_Constraints_List"`
 	//
-	ConstraintBasicCompulsoryTime basicTimeConstraint
-	//	ConstraintStudentsSetNotAvailableTimes []studentsNotAvailable
+	ConstraintBasicCompulsoryTime                basicTimeConstraint
+	ConstraintStudentsSetNotAvailableTimes       []studentsNotAvailable
 	ConstraintTeacherNotAvailableTimes           []teacherNotAvailable
 	ConstraintActivityPreferredStartingTime      []startingTime
 	ConstraintMinDaysBetweenActivities           []minDaysBetweenActivities
@@ -129,7 +129,7 @@ func make_fet_file(dbdata *w365tt.DbTopLevel,
 		// Handle the groups
 		for _, d := range r.Divisions {
 			for _, g := range d.Groups {
-				ref2fet[g] = fmt.Sprintf("%s.%s", r.Tag, ref2grouponly[g])
+				ref2fet[g] = r.Tag + CLASS_GROUP_SEP + ref2grouponly[g]
 			}
 		}
 	}
@@ -176,15 +176,6 @@ func make_fet_file(dbdata *w365tt.DbTopLevel,
 	*/
 
 	return xml.Header + makeXML(fetinfo.fetdata, 0)
-}
-
-func get_string(val interface{}) string {
-	s, ok := val.(string)
-	if !ok {
-		b, _ := json.Marshal(val)
-		s = string(b)
-	}
-	return strings.Trim(s, "\"")
 }
 
 func getString(val interface{}) string {

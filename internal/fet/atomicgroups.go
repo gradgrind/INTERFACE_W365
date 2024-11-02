@@ -90,8 +90,8 @@ func makeAtomicGroups(fetinfo *fetInfo) {
 			ago := AtomicGroup{
 				Class:  cl.Id,
 				Groups: ag,
-				Tag: fmt.Sprintf(
-					"%s#%s", cl.Tag, strings.Join(glist, "~")),
+				Tag: cl.Tag + ATOMIC_GROUP_SEP1 +
+					strings.Join(glist, ATOMIC_GROUP_SEP2),
 			}
 			aglist = append(aglist, ago)
 		}
@@ -125,6 +125,7 @@ func makeAtomicGroups(fetinfo *fetInfo) {
 	}
 }
 
+// For testing
 func printAtomicGroups(fetinfo *fetInfo) {
 	for _, cl := range fetinfo.db.Classes {
 		agls := []string{}
