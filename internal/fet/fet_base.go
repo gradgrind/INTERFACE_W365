@@ -37,13 +37,24 @@ type fet struct {
 	Subjects_List    fetSubjectsList
 	Rooms_List       fetRoomsList
 	Students_List    fetStudentsList
-	/*
-		//Buildings_List
-		Activity_Tags_List     fetActivityTags
-		Activities_List        fetActivitiesList
-	*/
+	//Buildings_List
+	Activity_Tags_List     fetActivityTags
+	Activities_List        fetActivitiesList
 	Time_Constraints_List  timeConstraints
 	Space_Constraints_List spaceConstraints
+}
+
+type virtualRoom struct {
+	rooms       []Ref   // only Rooms
+	roomChoices [][]Ref // list of pure Room lists
+}
+
+type courseInfo struct {
+	subject  Ref
+	groups   []Ref
+	teachers []Ref
+	room     virtualRoom
+	lessons  []Ref
 }
 
 type fetInfo struct {
@@ -54,10 +65,11 @@ type fetInfo struct {
 	hours         []string
 	fetdata       fet
 	// These cover only courses and groups with lessons:
-	superSubs      map[Ref][]Ref
-	courseGroups   map[Ref][]Ref
-	classDivisions map[Ref][][]Ref
-	atomicGroups   map[Ref][]AtomicGroup
+	superSubs       map[Ref][]Ref
+	courseInfo      map[Ref]courseInfo // Key can be Course or SuperCourse
+	classDivisions  map[Ref][][]Ref
+	atomicGroups    map[Ref][]AtomicGroup
+	fetVirtualRooms map[string]string
 
 	//TODO ... ???
 	//courses          map[Ref]int
@@ -86,12 +98,10 @@ type basicTimeConstraint struct {
 }
 
 type spaceConstraints struct {
-	XMLName                        xml.Name `xml:"Space_Constraints_List"`
-	ConstraintBasicCompulsorySpace basicSpaceConstraint
-	/*
-	   ConstraintActivityPreferredRoom  []fixedRoom
-	   ConstraintActivityPreferredRooms []roomChoice
-	*/
+	XMLName                          xml.Name `xml:"Space_Constraints_List"`
+	ConstraintBasicCompulsorySpace   basicSpaceConstraint
+	ConstraintActivityPreferredRoom  []fixedRoom
+	ConstraintActivityPreferredRooms []roomChoice
 }
 
 type basicSpaceConstraint struct {
@@ -162,16 +172,16 @@ func make_fet_file(dbdata *w365tt.DbTopLevel,
 	getSubjects(&fetinfo)
 	getRooms(&fetinfo)
 	fmt.Println("=====================================")
-	gatherCourseGroups(&fetinfo)
+	gatherCourseInfo(&fetinfo)
 
 	//readCourseIndexes(&fetinfo)
 	makeAtomicGroups(&fetinfo)
 	//fmt.Println("\n +++++++++++++++++++++++++++")
 	//printAtomicGroups(&fetinfo)
 	getClasses(&fetinfo)
+	getActivities(&fetinfo)
 
 	/*
-		getActivities(&fetinfo, activities, course2activities)
 		gap_subject_activities(&fetinfo, subject_activities)
 	*/
 

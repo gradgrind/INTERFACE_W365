@@ -23,10 +23,10 @@ func filterDivisions(fetinfo *fetInfo) {
 	// those Divisions which have Groups used in Lessons.
 
 	// Collect groups used in Lessons. Get them from the
-	// fetinfo.courseGroups map, which only includes courses with lessons.
+	// fetinfo.courseInfo.groups map, which only includes courses with lessons.
 	usedgroups := map[Ref]bool{}
-	for _, cg := range fetinfo.courseGroups {
-		for _, g := range cg {
+	for _, cinfo := range fetinfo.courseInfo {
+		for _, g := range cinfo.groups {
 			usedgroups[g] = true
 		}
 	}

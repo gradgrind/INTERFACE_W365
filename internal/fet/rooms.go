@@ -2,6 +2,8 @@ package fet
 
 import (
 	"encoding/xml"
+	"fmt"
+	"strings"
 )
 
 type fetRoom struct {
@@ -58,6 +60,74 @@ func getRooms(fetinfo *fetInfo) {
 	fetinfo.fetdata.Rooms_List = fetRoomsList{
 		Room: rooms,
 	}
+}
+
+// TODO
+func addRoomConstraint(fetinfo *fetInfo, aid int, room virtualRoom) {
+
+}
+
+func getFetRooms(fetinfo *fetInfo, room virtualRoom) []string {
+	// The fet virtual rooms are cached at fetinfo.fetVirtualRooms.
+	// First convert the Ref values to Element Tags for FET.
+	rtags := []string{}
+	for _, rref := range room.rooms {
+		rtags = append(rtags, fetinfo.ref2fet[rref])
+	}
+	rctags := [][]string{}
+	for _, rc := range room.roomChoices {
+		rcl := []string{}
+		for _, rref := range rc {
+			rcl = append(rcl, fetinfo.ref2fet[rref])
+		}
+		rctags = append(rctags, rcl)
+	}
+
+	if len(rctags) == 0 && len(rtags) < 2 {
+		return rtags
+	}
+	if len(rctags) == 1 && len(rtags) == 0 {
+		return rctags[0]
+	}
+
+	// Otherwise a virtual room is necessary.
+	srctags := []string{}
+	for _, rcl := range rctags {
+		srctags = append(srctags, strings.Join(rcl, ","))
+	}
+	key := strings.Join(rtags, ",") + "+" + strings.Join(srctags, "|")
+	vr, ok := fetinfo.fetVirtualRooms[key]
+	if !ok {
+		// Make virtual room, using rooms list from above.
+		rrslist := []realRoomSet{}
+		for _, rt := range rtags {
+			rrslist = append(rrslist, realRoomSet{
+				Number_of_Real_Rooms: 1,
+				Real_Room:            []string{rt},
+			})
+		}
+		// Add choice lists from above.
+		for _, rtl := range rctags {
+			rrslist = append(rrslist, realRoomSet{
+				Number_of_Real_Rooms: len(rtl),
+				Real_Room:            rtl,
+			})
+		}
+		vr = fmt.Sprintf("v%03d", len(fetinfo.fetVirtualRooms)+1)
+		vroom := fetRoom{
+			Name:                         vr,
+			Capacity:                     30000,
+			Virtual:                      true,
+			Number_of_Sets_of_Real_Rooms: len(rrslist),
+			Set_of_Real_Rooms:            rrslist,
+		}
+		// Add the virtual room to the fet file
+		fetinfo.fetdata.Rooms_List.Room = append(
+			fetinfo.fetdata.Rooms_List.Room, vroom)
+		// Remember key/value
+		fetinfo.fetVirtualRooms[key] = vr
+	}
+	return []string{vr}
 }
 
 /* TODO: Virtual rooms need to be built for more complex room requirements
