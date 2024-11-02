@@ -100,7 +100,7 @@ type basicTimeConstraint struct {
 type spaceConstraints struct {
 	XMLName                          xml.Name `xml:"Space_Constraints_List"`
 	ConstraintBasicCompulsorySpace   basicSpaceConstraint
-	ConstraintActivityPreferredRoom  []fixedRoom
+	ConstraintActivityPreferredRoom  []oneRoom
 	ConstraintActivityPreferredRooms []roomChoice
 }
 

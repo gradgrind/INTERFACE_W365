@@ -27,13 +27,15 @@ type fetRoomsList struct {
 	Room    []fetRoom
 }
 
-type fixedRoom struct {
-	XMLName            xml.Name `xml:"ConstraintActivityPreferredRoom"`
-	Weight_Percentage  int
-	Activity_Id        int
-	Room               string
-	Permanently_Locked bool // true
-	Active             bool // true
+type placedRoom struct {
+	XMLName              xml.Name `xml:"ConstraintActivityPreferredRoom"`
+	Weight_Percentage    int
+	Activity_Id          int
+	Room                 string
+	Number_of_Real_Rooms int      `xml:",omitempty"`
+	Real_Room            []string `xml:",omitempty"`
+	Permanently_Locked   bool     // false
+	Active               bool     // true
 }
 
 type roomChoice struct {
@@ -59,25 +61,6 @@ func getRooms(fetinfo *fetInfo) {
 	}
 	fetinfo.fetdata.Rooms_List = fetRoomsList{
 		Room: rooms,
-	}
-}
-
-func addRoomConstraint(
-	fetinfo *fetInfo,
-	roomChoices *[]roomChoice,
-	aids []int,
-	room virtualRoom,
-) {
-	rooms := getFetRooms(fetinfo, room)
-	// Add the constraints
-	for _, aid := range aids {
-		*roomChoices = append(*roomChoices, roomChoice{
-			Weight_Percentage:         100,
-			Activity_Id:               aid,
-			Number_of_Preferred_Rooms: len(rooms),
-			Preferred_Room:            rooms,
-			Active:                    true,
-		})
 	}
 }
 
