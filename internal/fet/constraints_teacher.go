@@ -25,17 +25,37 @@ alternative being a subject/atomic-group search.
 */
 
 // TODO: Add other constraints
+
 func addTeacherConstraints(fetinfo *fetInfo) {
-	//mdba := []minDaysBetweenActivities{}
-	tmaxdpw := []maxDays{}
+	tmaxdpw := []maxDaysT{}
+	tminlpd := []minLessonsPerDayT{}
+	tmaxlpd := []maxLessonsPerDayT{}
 	for _, t := range fetinfo.db.Teachers {
-		tmaxdpw = append(tmaxdpw, maxDays{
+		tmaxdpw = append(tmaxdpw, maxDaysT{
 			Weight_Percentage: 100,
 			Teacher:           t.Tag,
 			Max_Days_Per_Week: t.MaxDays.(int),
 			Active:            true,
 		})
+
+		tminlpd = append(tminlpd, minLessonsPerDayT{
+			Weight_Percentage:   100,
+			Teacher:             t.Tag,
+			Minimum_Hours_Daily: t.MinLessonsPerDay.(int),
+			Allow_Empty_Days:    false,
+			Active:              true,
+		})
+
+		tmaxlpd = append(tmaxlpd, maxLessonsPerDayT{
+			Weight_Percentage:   100,
+			Teacher:             t.Tag,
+			Maximum_Hours_Daily: t.MaxLessonsPerDay.(int),
+			Active:              true,
+		})
+
 	}
 	fetinfo.fetdata.Time_Constraints_List.
 		ConstraintTeacherMaxDaysPerWeek = tmaxdpw
+	fetinfo.fetdata.Time_Constraints_List.
+		ConstraintTeacherMinHoursDaily = tminlpd
 }

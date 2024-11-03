@@ -68,7 +68,7 @@ type maxLessonsPerDayT struct {
 	Active              bool
 }
 
-type maxDays struct {
+type maxDaysT struct {
 	XMLName           xml.Name `xml:"ConstraintTeacherMaxDaysPerWeek"`
 	Weight_Percentage int
 	Teacher           string
