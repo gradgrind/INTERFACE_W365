@@ -23,3 +23,19 @@ an appropriate constraint. Thus, the built-in constraint must be traceable.
 There could be a separate constraint to link different courses – the
 alternative being a subject/atomic-group search.
 */
+
+// TODO: Add other constraints
+func addTeacherConstraints(fetinfo *fetInfo) {
+	//mdba := []minDaysBetweenActivities{}
+	tmaxdpw := []maxDays{}
+	for _, t := range fetinfo.db.Teachers {
+		tmaxdpw = append(tmaxdpw, maxDays{
+			Weight_Percentage: 100,
+			Teacher:           t.Tag,
+			Max_Days_Per_Week: t.MaxDays.(int),
+			Active:            true,
+		})
+	}
+	fetinfo.fetdata.Time_Constraints_List.
+		ConstraintTeacherMaxDaysPerWeek = tmaxdpw
+}
