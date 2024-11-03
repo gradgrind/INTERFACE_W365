@@ -6,12 +6,6 @@ import (
 	"strings"
 )
 
-// const GROUP_SEP = ","
-// const DIV_SEP = "|"
-const CLASS_GROUP_SEP = "."
-const ATOMIC_GROUP_SEP1 = "#"
-const ATOMIC_GROUP_SEP2 = "~"
-
 type fetCategory struct {
 	//XMLName             xml.Name `xml:"Category"`
 	Number_of_Divisions int

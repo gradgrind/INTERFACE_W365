@@ -110,7 +110,8 @@ func getFetRooms(fetinfo *fetInfo, room virtualRoom) []string {
 				Real_Room:            rtl,
 			})
 		}
-		vr = fmt.Sprintf("v%03d", len(fetinfo.fetVirtualRooms)+1)
+		vr = fmt.Sprintf(
+			"%s%03d", VIRTUAL_ROOM_PREFIX, len(fetinfo.fetVirtualRooms)+1)
 		vroom := fetRoom{
 			Name:                         vr,
 			Capacity:                     30000,
@@ -123,6 +124,7 @@ func getFetRooms(fetinfo *fetInfo, room virtualRoom) []string {
 			fetinfo.fetdata.Rooms_List.Room, vroom)
 		// Remember key/value
 		fetinfo.fetVirtualRooms[key] = vr
+		fetinfo.fetVirtualRoomN[vr] = len(rrslist)
 	}
 	return []string{vr}
 }

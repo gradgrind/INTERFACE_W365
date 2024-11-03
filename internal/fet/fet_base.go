@@ -12,6 +12,11 @@ import (
 
 type Ref = w365tt.Ref
 
+const CLASS_GROUP_SEP = "."
+const ATOMIC_GROUP_SEP1 = "#"
+const ATOMIC_GROUP_SEP2 = "~"
+const VIRTUAL_ROOM_PREFIX = "!"
+
 const fet_version = "6.25.2"
 
 // Function makeXML produces a chunk of pretty-printed XML output from
@@ -65,17 +70,16 @@ type fetInfo struct {
 	hours         []string
 	fetdata       fet
 	// These cover only courses and groups with lessons:
-	superSubs       map[Ref][]Ref
-	courseInfo      map[Ref]courseInfo // Key can be Course or SuperCourse
-	classDivisions  map[Ref][][]Ref
-	atomicGroups    map[Ref][]AtomicGroup
-	fetVirtualRooms map[string]string
-
-	//TODO ... ???
-	//courses          map[Ref]int
-	//subcourses       map[Ref]int
-	//supercourses     map[Ref]int
-	//fixed_activities []bool
+	ONLY_FIXED bool // normally true, false allows generation of
+	// placement constraints for non-fixed lessons
+	WITHOUT_ROOM_PLACEMENTS bool
+	superSubs               map[Ref][]Ref
+	courseInfo              map[Ref]courseInfo // Key can be Course or SuperCourse
+	classDivisions          map[Ref][][]Ref
+	atomicGroups            map[Ref][]AtomicGroup
+	fetVirtualRooms         map[string]string // cache for FET virtual rooms,
+	// "hash" -> FET-virtual-room tag
+	fetVirtualRoomN map[string]int // FET-virtual-room tag -> number of room sets
 }
 
 type timeConstraints struct {
@@ -100,8 +104,8 @@ type basicTimeConstraint struct {
 type spaceConstraints struct {
 	XMLName                          xml.Name `xml:"Space_Constraints_List"`
 	ConstraintBasicCompulsorySpace   basicSpaceConstraint
-	ConstraintActivityPreferredRoom  []oneRoom
 	ConstraintActivityPreferredRooms []roomChoice
+	ConstraintActivityPreferredRoom  []placedRoom
 }
 
 type basicSpaceConstraint struct {
@@ -164,7 +168,10 @@ func make_fet_file(dbdata *w365tt.DbTopLevel,
 					Weight_Percentage: 100, Active: true},
 			},
 		},
-		fetVirtualRooms: map[string]string{},
+		ONLY_FIXED:              true,
+		WITHOUT_ROOM_PLACEMENTS: true,
+		fetVirtualRooms:         map[string]string{},
+		fetVirtualRoomN:         map[string]int{},
 	}
 
 	getDays(&fetinfo)

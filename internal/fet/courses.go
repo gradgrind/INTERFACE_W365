@@ -47,6 +47,7 @@ func gatherCourseInfo(fetinfo *fetInfo) {
 	fetinfo.superSubs = make(map[Ref][]Ref)
 	fetinfo.courseInfo = make(map[Ref]courseInfo)
 	roomData := map[Ref][]Ref{} // course-Ref -> []room-Ref (any sort of "room")
+
 	// Collect Courses with Lessons.
 	for _, l := range db.Lessons {
 		lcref := l.Course
@@ -93,6 +94,7 @@ func gatherCourseInfo(fetinfo *fetInfo) {
 		}
 		roomData[lcref] = rooms
 	}
+
 	// Now find the SubCourses
 	for _, sbc := range db.SubCourses {
 		spc := sbc.SuperCourse
@@ -121,14 +123,14 @@ func gatherCourseInfo(fetinfo *fetInfo) {
 			fetinfo.courseInfo[spc] = cinfo
 		}
 	}
+
 	// Prepare the internal room structure, filtering the room lists of
 	// the SuperCourses.
 	for cref, crlist := range roomData {
-		// TODO
 		// Join all Rooms and the Rooms from RoomGroups into a "compulsory"
 		// list. Then go through the RoomChoiceGroups. If one contains a
 		// compulsory room, ignore the choice.
-		// The result is a list of Rooms and a list of room-choice-lists,
+		// The result is a list of Rooms and a list of Room-choice-lists,
 		// which can be converted into a fet virtual room.
 		rooms := []Ref{}
 		roomChoices := [][]Ref{}
@@ -193,10 +195,6 @@ func getActivities(fetinfo *fetInfo) {
 	}
 	// ************* Now the activities
 	activities := []fetActivity{}
-	startingTimes := []startingTime{}
-	roomChoices := []roomChoice{}
-	lessonList := []*w365tt.Lesson{{}} // with empty first entry, because
-	// Activity Ids start at 1
 	aid := 0
 	for _, cinfo := range fetinfo.courseInfo {
 		// Teachers
@@ -246,71 +244,12 @@ func getActivities(fetinfo *fetInfo) {
 					Comments:          string(l.Id),
 				},
 			)
-			lessonList = append(lessonList, l)
-			// Generate placement constraints
-
-			//TODO: Should this be done AFTER the "addRoomConstraint" call?
-			if l.Day >= 0 {
-				addPlacementConstraints(fetinfo, aid, l)
-			}
 		}
-		addRoomConstraint(fetinfo, &roomChoices, aidlist, cinfo.room)
+		addPlacementConstraints(fetinfo, aidlist, llist, cinfo.room)
 	}
 	fetinfo.fetdata.Activities_List = fetActivitiesList{
 		Activity: activities,
 	}
-	fetinfo.fetdata.Space_Constraints_List.
-		ConstraintActivityPreferredRooms = roomChoices
-
-	//	fetinfo.fetdata.Space_Constraints_List.
-	//		ConstraintActivityPreferredRooms = []roomChoice{}
-
-	/*TODO: Deal with fixed lesson and fixed room constraints
-
-	fixed_rooms := []fixedRoom{}
-	room_choices := []roomChoice{}
-	virtual_rooms := map[string]string{}
-
-			addRoomConstraint(fetinfo,
-			&fixed_rooms,
-			&room_choices,
-			virtual_rooms,
-			acts,
-			activity.RoomNeeds,
-		)
-	}
-	// Now generate the full list of fet activities
-	starting_times := []startingTime{}
-	items := []fetActivity{}
-	fetinfo.fixed_activities = make([]bool, len(activities))
-	for i, activity := range activities {
-		ci := activity.Course
-		fetact := course_act[ci]
-		fetact.Id = i + 1
-		fetact.Duration = activity.Duration
-		items = append(items, fetact)
-		// Activity placement
-		day := activity.Day
-		if day >= 0 {
-			hour := activity.Hour
-			starting_times = append(starting_times, startingTime{
-				Weight_Percentage:  100,
-				Activity_Id:        i + 1,
-				Preferred_Day:      fetinfo.days[day],
-				Preferred_Hour:     fetinfo.hours[hour],
-				Permanently_Locked: true,
-				Active:             true,
-			})
-			fetinfo.fixed_activities[i] = true
-		}
-	}
-	fetinfo.fetdata.Activities_List = fetActivitiesList{
-		Activity: items,
-	}
-	fetinfo.fetdata.Time_Constraints_List.ConstraintActivityPreferredStartingTime = starting_times
-	fetinfo.fetdata.Space_Constraints_List.ConstraintActivityPreferredRoom = fixed_rooms
-	fetinfo.fetdata.Space_Constraints_List.ConstraintActivityPreferredRooms = room_choices
-	*/
 }
 
 func addPlacementConstraints(
@@ -336,97 +275,78 @@ func addPlacementConstraints(
 			},
 		)
 		l := lessons[i]
-		if l.Day >= 0 {
-			tcl.ConstraintActivityPreferredStartingTime = append(
-				tcl.ConstraintActivityPreferredStartingTime,
-				startingTime{
-					Weight_Percentage:  100,
-					Activity_Id:        aid,
-					Preferred_Day:      fetinfo.days[l.Day],
-					Preferred_Hour:     fetinfo.hours[l.Hour],
-					Permanently_Locked: l.Fixed,
-					Active:             true,
-				},
-			)
+		if l.Day < 0 {
+			continue
+		}
+		if fetinfo.ONLY_FIXED && !l.Fixed {
+			continue
+		}
+		tcl.ConstraintActivityPreferredStartingTime = append(
+			tcl.ConstraintActivityPreferredStartingTime,
+			startingTime{
+				Weight_Percentage:  100,
+				Activity_Id:        aid,
+				Preferred_Day:      fetinfo.days[l.Day],
+				Preferred_Hour:     fetinfo.hours[l.Hour],
+				Permanently_Locked: l.Fixed,
+				Active:             true,
+			},
+		)
+		if fetinfo.WITHOUT_ROOM_PLACEMENTS || len(l.Rooms) == 0 {
+			continue
+		}
 
-			//TODO: Check len(l.Rooms) == len(rooms)
-			// If just one room, it could be virtual.
-			// Virtual rooms are probably not in the Elements list.
-			// A virtual room needs real room entries.
+		// Get room tags of the Lesson's Rooms.
+		rlist := []string{}
+		for _, rref := range l.Rooms {
+			rlist = append(rlist, fetinfo.ref2fet[rref])
+		}
 
-			rlist := []string{}
-			for _, rref := range l.Rooms {
-				rlist = append(rlist, fetinfo.ref2fet[rref])
-			}
-			if len(rlist) == 1 {
+		// Special handling for FET's virtual rooms.
+
+		if len(rooms) == 1 {
+			// Check for virtual room.
+			n, ok := fetinfo.fetVirtualRoomN[rooms[0]]
+			if ok {
+				if len(rlist) != n {
+					log.Printf(
+						"*ERROR* Lesson %s:\n  Number of Rooms doesn't"+
+							" match virtual room (%s) in course. \n",
+						l.Id, rooms[0])
+					continue
+				}
 				scl.ConstraintActivityPreferredRoom = append(
 					scl.ConstraintActivityPreferredRoom,
 					placedRoom{
-						Weight_Percentage:  100,
-						Activity_Id:        aid,
-						Room:               rlist[0],
-						Permanently_Locked: false,
-						Active:             true,
-					},
-				)
-			} else if len(l.Rooms) > 1 {
-				scl.ConstraintActivityPreferredRoom = append(
-					scl.ConstraintActivityPreferredRoom,
-					placedRoom{
-						Weight_Percentage: 100,
-						Activity_Id:       aid,
-						//TODO:
-						Room:                 "virtual room",
+						Weight_Percentage:    100,
+						Activity_Id:          aid,
+						Room:                 rooms[0],
 						Number_of_Real_Rooms: len(rlist),
 						Real_Room:            rlist,
 						Permanently_Locked:   false,
 						Active:               true,
 					},
 				)
-			} // else no room-setting constraint
+				continue
+			}
 		}
-	}
-}
 
-/* --
-func addRoomConstraint(
-	fetinfo *fetInfo,
-	roomChoices *[]roomChoice,
-	aids []int,
-	room virtualRoom,
-) {
-	rooms := getFetRooms(fetinfo, room)
-	// Add the constraints
-	scl := &fetinfo.fetdata.Space_Constraints_List
-	for i, aid := range aids {
+		if len(rlist) != 1 {
+			log.Printf(
+				"*ERROR* Course room is not virtual, but Lesson has"+
+					" more than one Room:\n  %s", l.Id)
+			continue
+		}
 
-		scl.ConstraintActivityPreferredRooms = append(
-			scl.ConstraintActivityPreferredRooms,
-			roomChoice{
-				Weight_Percentage:         100,
-				Activity_Id:               aid,
-				Number_of_Preferred_Rooms: len(rooms),
-				Preferred_Room:            rooms,
-				Active:                    true,
+		scl.ConstraintActivityPreferredRoom = append(
+			scl.ConstraintActivityPreferredRoom,
+			placedRoom{
+				Weight_Percentage:  100,
+				Activity_Id:        aid,
+				Room:               rlist[0],
+				Permanently_Locked: false,
+				Active:             true,
 			},
 		)
-
-		l := lessons[i]
-
 	}
-
-	scl := &fetinfo.fetdata.Space_Constraints_List
-
-	scl.ConstraintActivityPreferredRooms = append(
-		scl.ConstraintActivityPreferredRooms,
-		roomChoice{
-			Weight_Percentage:         100,
-			Activity_Id:               aid,
-			Number_of_Preferred_Rooms: len(rooms),
-			Preferred_Room:            rooms,
-			Active:                    true,
-		},
-	)
-
 }
-*/
