@@ -2,7 +2,6 @@ package fet
 
 import (
 	"encoding/xml"
-	"log"
 )
 
 type startingTime struct {
@@ -25,40 +24,71 @@ type minDaysBetweenActivities struct {
 	Active                  bool
 }
 
-/* TODO
-func gap_subject_activities(fetinfo *fetInfo,
-	subject_activities []SubjectGroupActivities,
-) {
-	gsalist := []minDaysBetweenActivities{}
-	for _, sga := range subject_activities {
-		l := len(sga.Activities)
-		// Adjust indexes for fet
-		alist := []int{}
-		// Skip if all activities are "fixed".
-		allfixed := true
-		for _, ai := range sga.Activities {
-			alist = append(alist, ai+1)
-			if !fetinfo.fixed_activities[ai] {
-				allfixed = false
-			}
-		}
-		if allfixed {
-			continue
-		}
-		gsalist = append(gsalist, minDaysBetweenActivities{
-			Weight_Percentage:       100,
-			Consecutive_If_Same_Day: true,
-			Number_of_Activities:    l,
-			Activity_Id:             alist,
-			MinDays:                 1,
-			Active:                  true,
-		})
-	}
-	// TODO
-	//
-	//	fetinfo.fetdata.Time_Constraints_List.ConstraintMinDaysBetweenActivities = gsalist
+// *** Teacher constraints
+type lunchBreakT struct {
+	XMLName             xml.Name `xml:"ConstraintTeacherMaxHoursDailyInInterval"`
+	Weight_Percentage   int
+	Teacher             string
+	Interval_Start_Hour string
+	Interval_End_Hour   string
+	Maximum_Hours_Daily int
+	Active              bool
 }
-*/
+
+type maxGapsPerDayT struct {
+	XMLName           xml.Name `xml:"ConstraintTeacherMaxGapsPerDay"`
+	Weight_Percentage int
+	Teacher           string
+	Max_Gaps          int
+	Active            bool
+}
+
+type maxGapsPerWeekT struct {
+	XMLName           xml.Name `xml:"ConstraintTeacherMaxGapsPerWeek"`
+	Weight_Percentage int
+	Teacher           string
+	Max_Gaps          int
+	Active            bool
+}
+
+type minLessonsPerDayT struct {
+	XMLName             xml.Name `xml:"ConstraintTeacherMinHoursDaily"`
+	Weight_Percentage   int
+	Teacher             string
+	Minimum_Hours_Daily int
+	Allow_Empty_Days    bool
+	Active              bool
+}
+
+type maxLessonsPerDayT struct {
+	XMLName             xml.Name `xml:"ConstraintTeacherMaxHoursDaily"`
+	Weight_Percentage   int
+	Teacher             string
+	Maximum_Hours_Daily int
+	Active              bool
+}
+
+type maxDays struct {
+	XMLName           xml.Name `xml:"ConstraintTeacherMaxDaysPerWeek"`
+	Weight_Percentage int
+	Teacher           string
+	Max_Days_Per_Week int
+	Active            bool
+}
+
+// for MaxAfternoons
+type maxDaysinIntervalPerWeekT struct {
+	XMLName             xml.Name `xml:"ConstraintTeacherIntervalMaxDaysPerWeek"`
+	Weight_Percentage   int
+	Teacher             string
+	Interval_Start_Hour string
+	Interval_End_Hour   string
+	// Interval_End_Hour void ("") means the end of the day (which has no name)
+	Max_Days_Per_Week int
+	Active            bool
+}
+
+// *** Class constraints
 
 type lunchBreak struct {
 	XMLName             xml.Name `xml:"ConstraintStudentsSetMaxHoursDailyInInterval"`
@@ -70,35 +100,12 @@ type lunchBreak struct {
 	Active              bool
 }
 
-func lunch_break(
-	fetinfo *fetInfo,
-	lbconstraints *([]lunchBreak),
-	cname string,
-	lunchperiods []int,
-) bool {
-	// Assume the lunch periods are sorted, but not necessarily contiguous,
-	// which is necessary for this constraint.
-	lb1 := lunchperiods[0]
-	lb2 := lunchperiods[len(lunchperiods)-1] + 1
-	if lb2-lb1 != len(lunchperiods) {
-		log.Printf(
-			"\n=========================================\n"+
-				"  !!!  INCOMPATIBLE DATA: lunch periods not contiguous,\n"+
-				"       can't generate lunch-break constraint for class %s.\n"+
-				"=========================================\n",
-			cname)
-		return false
-	}
-	lb := lunchBreak{
-		Weight_Percentage:   100,
-		Students:            cname,
-		Interval_Start_Hour: fetinfo.hours[lb1],
-		Interval_End_Hour:   fetinfo.hours[lb2],
-		Maximum_Hours_Daily: len(lunchperiods) - 1,
-		Active:              true,
-	}
-	*lbconstraints = append(*lbconstraints, lb)
-	return true
+type maxGapsPerDay struct {
+	XMLName           xml.Name `xml:"ConstraintStudentsSetMaxGapsPerDay"`
+	Weight_Percentage int
+	Max_Gaps          int
+	Students          string
+	Active            bool
 }
 
 type maxGapsPerWeek struct {
@@ -118,37 +125,34 @@ type minLessonsPerDay struct {
 	Active              bool
 }
 
-/*TODO:
-For Teachers:
-	MinLessonsPerDay interface{}
-	MaxLessonsPerDay interface{}
-	MaxDays          interface{}
-	MaxGapsPerDay    interface{}
-	MaxGapsPerWeek   interface{}
-	MaxAfternoons    interface{}
-	LunchBreak       bool
-For Classes:
-	MinLessonsPerDay interface{}
-	MaxLessonsPerDay interface{}
-	MaxGapsPerDay    interface{}
-	MaxGapsPerWeek   interface{}
-	MaxAfternoons    interface{}
-	LunchBreak       bool
-	ForceFirstHour   bool
+type maxLessonsPerDay struct {
+	XMLName             xml.Name `xml:"ConstraintStudentsSetMaxHoursDaily"`
+	Weight_Percentage   int
+	Maximum_Hours_Daily int
+	Students            string
+	Active              bool
+}
 
-Lunch breaks can be done using max-hours-in-interval constraint, but that
-makes specification of max-gaps more difficult (becuase the lunch breaks
-count as gaps).
-The alternative is to add dummy lessons, clamped to the midday-break hours,
-on the days where none of the midday-break hours are blocked. This can be a
-problem if a class is finished earlier, but that may be a rare occurrence.
+// for MaxAfternoons
+type maxDaysinIntervalPerWeek struct {
+	XMLName             xml.Name `xml:"ConstraintStudentsSetIntervalMaxDaysPerWeek"`
+	Weight_Percentage   int
+	Students            string
+	Interval_Start_Hour string
+	Interval_End_Hour   string
+	// Interval_End_Hour void ("") means the end of the day (which has no name)
+	Max_Days_Per_Week int
+	Active            bool
+}
 
-The different-days constraint for lessons belonging to a single course can
-be added automatically, but it should be posible to disable it by passing in
-an appropriate constraint. Thus, the built-in constraint must be traceable.
-There could be a separate constraint to link different courses – the
-alternative being a subject/atomic-group search.
-*/
+// for ForceFirstHour
+type maxLateStarts struct {
+	XMLName                       xml.Name `xml:"ConstraintStudentsSetEarlyMaxBeginningsAtSecondHour"`
+	Weight_Percentage             int
+	Max_Beginnings_At_Second_Hour int
+	Students                      string
+	Active                        bool
+}
 
 func addDifferentDaysConstraints(fetinfo *fetInfo) {
 	mdba := []minDaysBetweenActivities{}

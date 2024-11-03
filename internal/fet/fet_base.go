@@ -89,14 +89,28 @@ type fetInfo struct {
 type timeConstraints struct {
 	XMLName xml.Name `xml:"Time_Constraints_List"`
 	//
-	ConstraintBasicCompulsoryTime                basicTimeConstraint
-	ConstraintStudentsSetNotAvailableTimes       []studentsNotAvailable
-	ConstraintTeacherNotAvailableTimes           []teacherNotAvailable
-	ConstraintActivityPreferredStartingTime      []startingTime
-	ConstraintMinDaysBetweenActivities           []minDaysBetweenActivities
-	ConstraintStudentsSetMaxHoursDailyInInterval []lunchBreak
-	ConstraintStudentsSetMaxGapsPerWeek          []maxGapsPerWeek
-	ConstraintStudentsSetMinHoursDaily           []minLessonsPerDay
+	ConstraintBasicCompulsoryTime          basicTimeConstraint
+	ConstraintStudentsSetNotAvailableTimes []studentsNotAvailable
+	ConstraintTeacherNotAvailableTimes     []teacherNotAvailable
+
+	ConstraintActivityPreferredStartingTime []startingTime
+	ConstraintMinDaysBetweenActivities      []minDaysBetweenActivities
+
+	ConstraintStudentsSetMaxGapsPerDay                  []maxGapsPerDay
+	ConstraintStudentsSetMaxGapsPerWeek                 []maxGapsPerWeek
+	ConstraintStudentsSetMinHoursDaily                  []minLessonsPerDay
+	ConstraintStudentsSetMaxHoursDaily                  []maxLessonsPerDay
+	ConstraintStudentsSetIntervalMaxDaysPerWeek         []maxDaysinIntervalPerWeek
+	ConstraintStudentsSetEarlyMaxBeginningsAtSecondHour []maxLateStarts
+	ConstraintStudentsSetMaxHoursDailyInInterval        []lunchBreak
+
+	ConstraintTeacherMaxDaysPerWeek          []maxDays
+	ConstraintTeacherMaxGapsPerDay           []maxGapsPerDayT
+	ConstraintTeacherMaxGapsPerWeek          []maxGapsPerWeekT
+	ConstraintTeacherMaxHoursDailyInInterval []lunchBreakT
+	ConstraintTeacherMinHoursDaily           []minLessonsPerDayT
+	ConstraintTeacherMaxHoursDaily           []maxLessonsPerDayT
+	ConstraintTeacherIntervalMaxDaysPerWeek  []maxDaysinIntervalPerWeekT
 }
 
 type basicTimeConstraint struct {
@@ -118,13 +132,7 @@ type basicSpaceConstraint struct {
 	Active            bool
 }
 
-func make_fet_file(dbdata *w365tt.DbTopLevel,
-
-// activities []wzbase.Activity,
-// course2activities map[int][]int,
-// subject_activities []wzbase.SubjectGroupActivities,
-) string {
-	//TODO--
+func make_fet_file(dbdata *w365tt.DbTopLevel) string {
 	//fmt.Printf("\n????? %+v\n", dbdata.Info)
 
 	// Build ref-index -> fet-key mapping
