@@ -55,11 +55,12 @@ type virtualRoom struct {
 }
 
 type courseInfo struct {
-	subject  Ref
-	groups   []Ref
-	teachers []Ref
-	room     virtualRoom
-	lessons  []Ref
+	subject    Ref
+	groups     []Ref
+	teachers   []Ref
+	room       virtualRoom
+	lessons    []*w365tt.Lesson
+	activities []int
 }
 
 type fetInfo struct {

@@ -117,3 +117,53 @@ type minLessonsPerDay struct {
 	Allow_Empty_Days    bool
 	Active              bool
 }
+
+/*TODO:
+For Teachers:
+	MinLessonsPerDay interface{}
+	MaxLessonsPerDay interface{}
+	MaxDays          interface{}
+	MaxGapsPerDay    interface{}
+	MaxGapsPerWeek   interface{}
+	MaxAfternoons    interface{}
+	LunchBreak       bool
+For Classes:
+	MinLessonsPerDay interface{}
+	MaxLessonsPerDay interface{}
+	MaxGapsPerDay    interface{}
+	MaxGapsPerWeek   interface{}
+	MaxAfternoons    interface{}
+	LunchBreak       bool
+	ForceFirstHour   bool
+
+Lunch breaks can be done using max-hours-in-interval constraint, but that
+makes specification of max-gaps more difficult (becuase the lunch breaks
+count as gaps).
+The alternative is to add dummy lessons, clamped to the midday-break hours,
+on the days where none of the midday-break hours are blocked. This can be a
+problem if a class is finished earlier, but that may be a rare occurrence.
+
+The different-days constraint for lessons belonging to a single course can
+be added automatically, but it should be posible to disable it by passing in
+an appropriate constraint. Thus, the built-in constraint must be traceable.
+There could be a separate constraint to link different courses – the
+alternative being a subject/atomic-group search.
+*/
+
+func addDiffeentDaysConstraints(fetinfo *fetInfo) {
+	/*
+		for cref, cinfo := range fetinfo.courseInfo {
+
+			// Need the Acivity_Ids for the Lessons, and whether they are fixed.
+			// No two fixed activities should be different-dayed.
+		}
+
+		fetinfo.courseInfo[lcref] = courseInfo{
+			subject:  subject,
+			groups:   groups,
+			teachers: teachers,
+			//rooms: filled later
+			lessons: lessons,
+		}
+	*/
+}
