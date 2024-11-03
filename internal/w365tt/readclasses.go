@@ -22,19 +22,19 @@ func (dbp *DbTopLevel) readClasses() {
 			n.NotAvailable = []TimeSlot{}
 		}
 		if n.MinLessonsPerDay == nil {
-			n.MinLessonsPerDay = -1
+			n.MinLessonsPerDay = -1.0
 		}
 		if n.MaxLessonsPerDay == nil {
-			n.MaxLessonsPerDay = -1
+			n.MaxLessonsPerDay = -1.0
 		}
 		if n.MaxGapsPerDay == nil {
-			n.MaxGapsPerDay = -1
+			n.MaxGapsPerDay = -1.0
 		}
 		if n.MaxGapsPerWeek == nil {
-			n.MaxGapsPerWeek = -1
+			n.MaxGapsPerWeek = -1.0
 		}
 		if n.MaxAfternoons == nil {
-			n.MaxAfternoons = -1
+			n.MaxAfternoons = -1.0
 		}
 
 		// Get the divisions and flag their Groups.

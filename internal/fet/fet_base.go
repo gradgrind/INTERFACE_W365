@@ -104,7 +104,7 @@ type timeConstraints struct {
 	ConstraintStudentsSetEarlyMaxBeginningsAtSecondHour []maxLateStarts
 	ConstraintStudentsSetMaxHoursDailyInInterval        []lunchBreak
 
-	ConstraintTeacherMaxDaysPerWeek          []maxDays
+	ConstraintTeacherMaxDaysPerWeek          []maxDaysT
 	ConstraintTeacherMaxGapsPerDay           []maxGapsPerDayT
 	ConstraintTeacherMaxGapsPerWeek          []maxGapsPerWeekT
 	ConstraintTeacherMaxHoursDailyInInterval []lunchBreakT
@@ -201,6 +201,8 @@ func make_fet_file(dbdata *w365tt.DbTopLevel) string {
 	//printAtomicGroups(&fetinfo)
 	getClasses(&fetinfo)
 	getActivities(&fetinfo)
+
+	addTeacherConstraints(&fetinfo)
 
 	/*
 		gap_subject_activities(&fetinfo, subject_activities)
