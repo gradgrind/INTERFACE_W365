@@ -80,7 +80,10 @@ type fetInfo struct {
 	atomicGroups            map[Ref][]AtomicGroup
 	fetVirtualRooms         map[string]string // cache for FET virtual rooms,
 	// "hash" -> FET-virtual-room tag
-	fetVirtualRoomN map[string]int // FET-virtual-room tag -> number of room sets
+	fetVirtualRoomN         map[string]int // FET-virtual-room tag -> number of room sets
+	differentDayConstraints map[Ref][]int  // Retain the indexes of the entries
+	// in the ConstraintMinDaysBetweenActivities list for each course. This
+	// allows the default constraints to be modified later.
 }
 
 type timeConstraints struct {
@@ -173,6 +176,7 @@ func make_fet_file(dbdata *w365tt.DbTopLevel,
 		WITHOUT_ROOM_PLACEMENTS: true,
 		fetVirtualRooms:         map[string]string{},
 		fetVirtualRoomN:         map[string]int{},
+		differentDayConstraints: map[Ref][]int{},
 	}
 
 	getDays(&fetinfo)

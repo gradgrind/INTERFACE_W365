@@ -150,20 +150,58 @@ There could be a separate constraint to link different courses – the
 alternative being a subject/atomic-group search.
 */
 
-func addDiffeentDaysConstraints(fetinfo *fetInfo) {
-	/*
-		for cref, cinfo := range fetinfo.courseInfo {
+func addDifferentDaysConstraints(fetinfo *fetInfo) {
+	mdba := []minDaysBetweenActivities{}
+	for cref, cinfo := range fetinfo.courseInfo {
+		if len(cinfo.activities) < 2 {
+			continue
+		}
+		// Need the Acivity_Ids for the Lessons, and whether they are fixed.
+		// No two fixed activities should be different-dayed.
 
-			// Need the Acivity_Ids for the Lessons, and whether they are fixed.
-			// No two fixed activities should be different-dayed.
+		fixeds := []int{}
+		unfixeds := []int{}
+		for i, l := range cinfo.lessons {
+			if l.Fixed {
+				fixeds = append(fixeds, cinfo.activities[i])
+			} else {
+				unfixeds = append(unfixeds, cinfo.activities[i])
+			}
 		}
 
-		fetinfo.courseInfo[lcref] = courseInfo{
-			subject:  subject,
-			groups:   groups,
-			teachers: teachers,
-			//rooms: filled later
-			lessons: lessons,
+		if len(fixeds) <= 1 {
+			fetinfo.differentDayConstraints[cref] = []int{len(mdba)}
+			mdba = append(mdba, minDaysBetweenActivities{
+				Weight_Percentage:       100,
+				Consecutive_If_Same_Day: true,
+				Number_of_Activities:    len(unfixeds),
+				Activity_Id:             cinfo.activities,
+				MinDays:                 1,
+				Active:                  true,
+			})
+			continue
 		}
-	*/
+
+		if len(unfixeds) == 0 {
+			continue
+		}
+
+		ddc := []int{} // Collect indexes within mdba
+		for _, aid := range fixeds {
+			aids := []int{aid}
+			aids = append(aids, unfixeds...)
+			ddc = append(ddc, len(mdba))
+			mdba = append(mdba, minDaysBetweenActivities{
+				Weight_Percentage:       100,
+				Consecutive_If_Same_Day: true,
+				Number_of_Activities:    len(aids),
+				Activity_Id:             aids,
+				MinDays:                 1,
+				Active:                  true,
+			})
+		}
+		fetinfo.differentDayConstraints[cref] = ddc
+	}
+	fetinfo.fetdata.Time_Constraints_List.
+		ConstraintMinDaysBetweenActivities = mdba
 }

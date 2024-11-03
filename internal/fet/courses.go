@@ -254,6 +254,7 @@ func getActivities(fetinfo *fetInfo) {
 		Activity: activities,
 	}
 	addPlacementConstraints(fetinfo)
+	addDifferentDaysConstraints(fetinfo)
 }
 
 func addPlacementConstraints(fetinfo *fetInfo) {
