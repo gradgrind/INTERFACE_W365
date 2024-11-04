@@ -22,30 +22,6 @@ groups if it is permissible for the various groups in a class to have their
 break at different times.
 */
 
-/* TODO Generate lb-subjects and constraints, accordiong to lblist (see below):
-
-<ConstraintActivitiesPreferredTimeSlots>
-	<Weight_Percentage>100</Weight_Percentage>
-	<Teacher></Teacher>
-	<Students></Students>
-	<Subject>-lb-</Subject>
-	<Activity_Tag></Activity_Tag>
-	<Duration></Duration>
-	<Number_of_Preferred_Time_Slots>2</Number_of_Preferred_Time_Slots>
-	<Preferred_Time_Slot>
-		<Preferred_Day>Mo</Preferred_Day>
-		<Preferred_Hour>(6)</Preferred_Hour>
-	</Preferred_Time_Slot>
-	<Preferred_Time_Slot>
-		<Preferred_Day>Mo</Preferred_Day>
-		<Preferred_Hour>(7)</Preferred_Hour>
-	</Preferred_Time_Slot>
-	<Active>true</Active>
-	<Comments></Comments>
-</ConstraintActivitiesPreferredTimeSlots>
-
-*/
-
 func addClassConstraints(fetinfo *fetInfo) {
 	cminlpd := []minLessonsPerDay{}
 	cmaxlpd := []maxLessonsPerDay{}
@@ -56,6 +32,8 @@ func addClassConstraints(fetinfo *fetInfo) {
 	ndays := len(fetinfo.days)
 	nhours := len(fetinfo.hours)
 	lblist := make([]string, ndays)
+	mbhours := fetinfo.db.Info.MiddayBreak
+	actlist := &fetinfo.fetdata.Activities_List
 
 	for clix := 0; clix < len(fetinfo.db.Classes); clix++ {
 		cl := &fetinfo.db.Classes[clix]
@@ -126,7 +104,6 @@ func addClassConstraints(fetinfo *fetInfo) {
 		if cl.LunchBreak {
 			// Generate the constraint unless all days have a blocked lesson
 			// at lunchtime.
-			mbhours := fetinfo.db.Info.MiddayBreak
 			days := make([]bool, ndays)
 			d := 0
 			for _, ts := range cl.NotAvailable {
@@ -144,7 +121,7 @@ func addClassConstraints(fetinfo *fetInfo) {
 				if !nok {
 					lb := lblist[d]
 					if lb == "" {
-						lb := fmt.Sprintf(LUNCH_BREAK_TAG, d)
+						lb = fmt.Sprintf(LUNCH_BREAK_TAG, d)
 						lblist[d] = lb
 					}
 					lbdays = append(lbdays, lb)
@@ -152,21 +129,29 @@ func addClassConstraints(fetinfo *fetInfo) {
 			}
 			if len(lbdays) != 0 {
 				// Add dummy lessons for lunch-breaks.
-				acl := &fetinfo.fetdata.Activities_List
+				// Undivided classes have no atomic groups, but also they
+				// need to be handled here.
+				agtags := [][]string{}
 				for _, ag := range fetinfo.atomicGroups[cl.Id] {
-					agtag := []string{ag.Tag}
+					agtags = append(agtags, []string{ag.Tag})
+				}
+				if len(agtags) == 0 {
+					agtags = append(agtags, []string{cl.Tag})
+				}
+				for _, agtag := range agtags {
 					for _, lb := range lbdays {
-						aid := len(acl.Activity) + 1
-						acl.Activity = append(acl.Activity, fetActivity{
-							Id:                aid,
-							Teacher:           []string{},
-							Subject:           lb,
-							Students:          agtag,
-							Active:            true,
-							Total_Duration:    1,
-							Duration:          1,
-							Activity_Group_Id: 0,
-						})
+						aid := len(actlist.Activity) + 1
+						actlist.Activity = append(
+							actlist.Activity, fetActivity{
+								Id:                aid,
+								Teacher:           []string{},
+								Subject:           lb,
+								Students:          agtag,
+								Active:            true,
+								Total_Duration:    1,
+								Duration:          1,
+								Activity_Group_Id: 0,
+							})
 					}
 				}
 			}
@@ -184,4 +169,32 @@ func addClassConstraints(fetinfo *fetInfo) {
 		ConstraintStudentsSetIntervalMaxDaysPerWeek = cmaxaft
 	fetinfo.fetdata.Time_Constraints_List.
 		ConstraintStudentsSetEarlyMaxBeginningsAtSecondHour = cmaxls
+	// Generate special subjects and time-constraints for the lunch-breaks.
+	captss := []preferredSlots{}
+	for d, lb := range lblist {
+		// Dummy subjects for lunch breaks
+		fetinfo.fetdata.Subjects_List.Subject = append(
+			fetinfo.fetdata.Subjects_List.Subject, fetSubject{
+				Name:      lb,
+				Long_Name: LUNCH_BREAK_NAME,
+			})
+		// Constraint it to the lunch slots on the given day.
+		dtag := fetinfo.days[d]
+		ptlist := []preferredTime{}
+		for _, h := range mbhours {
+			ptlist = append(ptlist, preferredTime{
+				Preferred_Day:  dtag,
+				Preferred_Hour: fetinfo.hours[h],
+			})
+		}
+		captss = append(captss, preferredSlots{
+			Weight_Percentage:              100,
+			Subject:                        lb,
+			Number_of_Preferred_Time_Slots: 2,
+			Preferred_Time_Slot:            ptlist,
+			Active:                         true,
+		})
+	}
+	fetinfo.fetdata.Time_Constraints_List.
+		ConstraintActivitiesPreferredTimeSlots = captss
 }

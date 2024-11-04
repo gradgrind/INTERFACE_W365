@@ -24,11 +24,6 @@ func getSubjects(fetinfo *fetInfo) {
 			Long_Name: n.Name,
 		})
 	}
-	// A dummy subject for lunch breaks
-	items = append(items, fetSubject{
-		Name:      LUNCH_BREAK_TAG,
-		Long_Name: LUNCH_BREAK_NAME,
-	})
 	fetinfo.fetdata.Subjects_List = fetSubjectsList{
 		Subject: items,
 	}
