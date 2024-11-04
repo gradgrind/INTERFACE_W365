@@ -154,10 +154,18 @@ type maxLateStarts struct {
 	Active                        bool
 }
 
+/*
+The different-days constraint for lessons belonging to a single course can
+be added automatically, but it should be posible to disable it by passing in
+an appropriate constraint. Thus, the built-in constraint must be traceable.
+TODO: There could be a separate constraint to link different courses – the
+alternative being a subject/atomic-group search.
+*/
 func addDifferentDaysConstraints(fetinfo *fetInfo) {
 	mdba := []minDaysBetweenActivities{}
 	for cref, cinfo := range fetinfo.courseInfo {
-		if len(cinfo.activities) < 2 {
+		nact := len(cinfo.activities)
+		if nact < 2 || nact > len(fetinfo.days) {
 			continue
 		}
 		// Need the Acivity_Ids for the Lessons, and whether they are fixed.

@@ -3,6 +3,7 @@ package w365tt
 import (
 	"fmt"
 	"log"
+	"slices"
 	"strconv"
 	"strings"
 )
@@ -208,6 +209,14 @@ func (db *DbTopLevel) checkDb() {
 	// Initializations
 	if db.Info.MiddayBreak == nil {
 		db.Info.MiddayBreak = []int{}
+	} else {
+		// Sort and check contiguity.
+		slices.Sort(db.Info.MiddayBreak)
+		mb := db.Info.MiddayBreak
+		if mb[len(mb)-1]-mb[0] >= len(mb) {
+			log.Fatalln("*ERROR* MiddayBreak hours not contiguous")
+		}
+
 	}
 	db.SubjectTags = map[string]Ref{}
 	db.SubjectNames = map[string]string{}

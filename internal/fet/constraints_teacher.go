@@ -1,49 +1,24 @@
 package fet
 
 import (
-	"gradgrind/INTERFACE_W365/internal/w365tt"
 	"slices"
 )
 
-/*TODO:
-For Teachers:
-	LunchBreak       bool
+/* Lunch-breaks
 
-Lunch breaks can be done using max-hours-in-interval constraint, but that
+Lunch-breaks can be done using max-hours-in-interval constraint, but that
 makes specification of max-gaps more difficult (becuase the lunch breaks
 count as gaps).
+
 The alternative is to add dummy lessons, clamped to the midday-break hours,
-on the days where none of the midday-break hours are blocked. This can be a
-problem if a class is finished earlier, but that may be a rare occurrence.
+on the days where none of the midday-break hours are blocked. However, this
+can also cause problems with gaps – the dummy lesson can itself create gaps,
+for example when a teacher's lessons are earlier in the day.
 
-The different-days constraint for lessons belonging to a single course can
-be added automatically, but it should be posible to disable it by passing in
-an appropriate constraint. Thus, the built-in constraint must be traceable.
-There could be a separate constraint to link different courses – the
-alternative being a subject/atomic-group search.
+All in all, I think the max-hours-in-interval constraint is probably better
+for the teachers. If there is a maximum-gaps constraint, the user may need
+to adjust it to take the lunch-breaks into acccount.
 */
-
-// TODO
-func teacherLunchBreaks(fetinfo *fetInfo, t *w365tt.Teacher) {
-	mbhours := fetinfo.db.Info.MiddayBreak
-	days := []int{}
-	d := 0
-	for _, ts := range t.NotAvailable {
-		if ts.Day < d {
-			continue
-		}
-		if slices.Contains(mbhours, ts.Hour) {
-			days = append(days, ts.Day)
-			d = ts.Day + 1
-		}
-	}
-
-	// Possibility 1: Add a dummy lesson for each day in days, constrained
-	// to the hours in mbhours.
-
-	// Possibility 2: Add a lunch-break constraint. This doesn't need the
-	// days, but they may be useful for adjusting the max gaps?
-}
 
 func addTeacherConstraints(fetinfo *fetInfo) {
 	tmaxdpw := []maxDaysT{}
@@ -52,10 +27,12 @@ func addTeacherConstraints(fetinfo *fetInfo) {
 	tmaxgpd := []maxGapsPerDayT{}
 	tmaxgpw := []maxGapsPerWeekT{}
 	tmaxaft := []maxDaysinIntervalPerWeekT{}
+	tlblist := []lunchBreakT{}
 	ndays := len(fetinfo.days)
 	nhours := len(fetinfo.hours)
 
-	for _, t := range fetinfo.db.Teachers {
+	for tix := 0; tix < len(fetinfo.db.Teachers); tix++ {
+		t := &fetinfo.db.Teachers[tix]
 		n := int(t.MaxDays.(float64))
 		if n >= 0 && n < ndays {
 			tmaxdpw = append(tmaxdpw, maxDaysT{
@@ -67,12 +44,12 @@ func addTeacherConstraints(fetinfo *fetInfo) {
 		}
 
 		n = int(t.MinLessonsPerDay.(float64))
-		if n >= 0 && n <= nhours {
+		if n >= 2 && n <= nhours {
 			tminlpd = append(tminlpd, minLessonsPerDayT{
 				Weight_Percentage:   100,
 				Teacher:             t.Tag,
 				Minimum_Hours_Daily: n,
-				Allow_Empty_Days:    false,
+				Allow_Empty_Days:    true,
 				Active:              true,
 			})
 		}
@@ -120,6 +97,33 @@ func addTeacherConstraints(fetinfo *fetInfo) {
 			})
 		}
 
+		if t.LunchBreak {
+			// Generate the constraint unless all days have a blocked lesson
+			// at lunchtime.
+			mbhours := fetinfo.db.Info.MiddayBreak
+			ndays := 0
+			d := 0
+			for _, ts := range t.NotAvailable {
+				if ts.Day < d {
+					continue
+				}
+				if slices.Contains(mbhours, ts.Hour) {
+					ndays++
+					d = ts.Day + 1
+				}
+			}
+			if ndays < len(fetinfo.days) {
+				// Add a lunch-break constraint.
+				tlblist = append(tlblist, lunchBreakT{
+					Weight_Percentage:   100,
+					Teacher:             t.Tag,
+					Interval_Start_Hour: fetinfo.hours[mbhours[0]],
+					Interval_End_Hour:   fetinfo.hours[mbhours[0]+len(mbhours)],
+					Maximum_Hours_Daily: len(mbhours) - 1,
+					Active:              true,
+				})
+			}
+		}
 	}
 	fetinfo.fetdata.Time_Constraints_List.
 		ConstraintTeacherMaxDaysPerWeek = tmaxdpw
@@ -133,4 +137,6 @@ func addTeacherConstraints(fetinfo *fetInfo) {
 		ConstraintTeacherMaxGapsPerWeek = tmaxgpw
 	fetinfo.fetdata.Time_Constraints_List.
 		ConstraintTeacherIntervalMaxDaysPerWeek = tmaxaft
+	fetinfo.fetdata.Time_Constraints_List.
+		ConstraintTeacherMaxHoursDailyInInterval = tlblist
 }

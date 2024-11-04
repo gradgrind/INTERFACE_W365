@@ -30,9 +30,9 @@ func ReadJSON(jsonpath string) *DbTopLevel {
 
 func LoadJSON(jsonpath string) *DbTopLevel {
 	dbdata := ReadJSON(jsonpath)
-	dbdata.checkDb()
 	// Days need no initialization.
 	dbdata.readHours()
+	dbdata.checkDb()
 	dbdata.readTeachers()
 	dbdata.readSubjects()
 	dbdata.readRooms()
