@@ -59,10 +59,6 @@ type studentsNotAvailable struct {
 func getClasses(fetinfo *fetInfo) {
 	items := []fetClass{}
 	natimes := []studentsNotAvailable{}
-	lunchperiods := fetinfo.db.Info.MiddayBreak
-	//lunchconstraints := []lunchBreak{}
-	//maxgaps := []maxGapsPerWeek{}
-	//minlessons := []minLessonsPerDay{}
 	for _, cl := range fetinfo.db.Classes {
 		cname := cl.Tag
 		divs, ok := fetinfo.classDivisions[cl.Id]
@@ -119,12 +115,8 @@ func getClasses(fetinfo *fetInfo) {
 		}
 
 		// "Not available" times.
-		// Seek also the days where a lunch-break is necessary – those days
-		// where none of the lunch-break periods are blocked.
-		lbdays := []int{} // list of days with lunch break
 		nats := []notAvailableTime{}
 		day := 0
-		lbd := true // day has lunch break?
 		for _, na := range cl.NotAvailable {
 			if na.Day != day {
 				if na.Day < day {
@@ -132,21 +124,7 @@ func getClasses(fetinfo *fetInfo) {
 						"Class %s has unordered NotAvailable times.\n",
 						cname)
 				}
-				if lbd {
-					lbdays = append(lbdays, day)
-				} else {
-					lbd = true
-				}
 				day = na.Day
-			}
-
-			if lbd {
-				for _, hh := range lunchperiods {
-					if hh == na.Hour {
-						lbd = false
-						break
-					}
-				}
 			}
 			nats = append(nats,
 				notAvailableTime{

@@ -16,7 +16,7 @@ const CLASS_GROUP_SEP = "."
 const ATOMIC_GROUP_SEP1 = "#"
 const ATOMIC_GROUP_SEP2 = "~"
 const VIRTUAL_ROOM_PREFIX = "!"
-const LUNCH_BREAK_TAG = "-lb-"
+const LUNCH_BREAK_TAG = "-lb%d-"
 const LUNCH_BREAK_NAME = "Lunch Break"
 
 const fet_version = "6.25.2"
@@ -205,10 +205,7 @@ func make_fet_file(dbdata *w365tt.DbTopLevel) string {
 	getActivities(&fetinfo)
 
 	addTeacherConstraints(&fetinfo)
-
-	/*
-		gap_subject_activities(&fetinfo, subject_activities)
-	*/
+	addClassConstraints(&fetinfo)
 
 	return xml.Header + makeXML(fetinfo.fetdata, 0)
 }
