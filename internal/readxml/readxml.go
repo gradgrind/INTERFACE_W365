@@ -54,6 +54,7 @@ func ConvertToJSON(f365xml string) string {
 	outdata.Info.Reference = string(indata.Id)
 	outdata.Info.Institution = root.SchoolState.SchoolName
 	//outdata.Info.Schedule = "Vorlage"
+	readCategories(id2node, indata.Categories)
 	readDays(&outdata, id2node, indata.Days)
 	readHours(&outdata, id2node, indata.Hours)
 	for _, n := range indata.Absences {
@@ -354,34 +355,6 @@ func readClasses(
 	}
 }
 
-func readCourses(
-	outdata *w365tt.DbTopLevel,
-	id2node map[w365tt.Ref]interface{},
-	items []Course,
-) {
-	for _, n := range items {
-		nid := addId(id2node, &n)
-		if nid == "" {
-			continue
-		}
-		msg := fmt.Sprintf("Course %s in Subjects", nid)
-		sbjs := GetRefList(id2node, n.Subjects, msg)
-		msg = fmt.Sprintf("Course %s in Groups", nid)
-		grps := GetRefList(id2node, n.Groups, msg)
-		msg = fmt.Sprintf("Course %s in Teachers", nid)
-		tchs := GetRefList(id2node, n.Teachers, msg)
-		msg = fmt.Sprintf("Course %s in PreferredRooms", nid)
-		rms := GetRefList(id2node, n.PreferredRooms, msg)
-		outdata.Courses = append(outdata.Courses, w365tt.Course{
-			Id:             nid,
-			Subjects:       sbjs,
-			Groups:         grps,
-			Teachers:       tchs,
-			PreferredRooms: rms,
-		})
-	}
-}
-
 func readEpochPlanCourses(
 	outdata *w365tt.DbTopLevel,
 	id2node map[w365tt.Ref]interface{},
@@ -440,6 +413,19 @@ func readLessons(
 			Fixed:    n.Fixed,
 			Rooms:    GetRefList(id2node, n.LocalRooms, msg),
 		})
+	}
+}
+
+func readCategories(
+	//outdata *w365tt.DbTopLevel,
+	id2node map[w365tt.Ref]interface{},
+	items []Category,
+) {
+	for _, n := range items {
+		nid := addId(id2node, &n)
+		if nid == "" {
+			continue
+		}
 	}
 }
 

@@ -220,7 +220,6 @@ type Lesson struct {
 	Hour         int        `xml:",attr"`
 	DoubleLesson bool       `xml:",attr"` // What exactly does this mean?
 	Fixed        bool       `xml:",attr"`
-	Fractions    RefList    `xml:",attr"`
 	LocalRooms   RefList    `xml:",attr"`
 	EpochPlan    w365tt.Ref `xml:",attr"` // What is this? Not relevant?
 	// If this entry is not empty, the Course field may be an EpochPlanCourse ... or nothing!
@@ -231,12 +230,15 @@ func (n *Lesson) IdStr() w365tt.Ref {
 	return n.Id
 }
 
-type Fraction struct {
-	Id          w365tt.Ref `xml:",attr"`
-	SuperGroups RefList    `xml:",attr"`
+type Category struct {
+	Id        w365tt.Ref `xml:",attr"`
+	Name      string     `xml:",attr"`
+	Shortcut  string     `xml:",attr"`
+	Colliding bool       `xml:",attr"`
+	Role      int        `xml:",attr"`
 }
 
-func (n *Fraction) IdStr() w365tt.Ref {
+func (n *Category) IdStr() w365tt.Ref {
 	return n.Id
 }
 
@@ -271,4 +273,5 @@ type Scenario struct { // Contains the main data to be processed.
 	Courses          []Course          `xml:"Course"`
 	EpochPlanCourses []EpochPlanCourse `xml:"EpochPlanCourse"`
 	Lessons          []Lesson          `xml:"Lesson"`
+	Categories       []Category        `xml:"Category"`
 }
