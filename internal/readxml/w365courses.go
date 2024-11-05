@@ -26,7 +26,8 @@ func readCourses(
 	outdata *w365tt.DbTopLevel,
 	id2node map[w365tt.Ref]interface{},
 	items []Course,
-) {
+) map[w365tt.Ref][]int {
+	courseLessons := map[w365tt.Ref][]int{} // build return value here
 	xcourses := map[string]xCourse{}
 	for _, n := range items {
 		nid := addId(id2node, &n)
@@ -41,6 +42,26 @@ func readCourses(
 		tchs := GetRefList(id2node, n.Teachers, msg)
 		msg = fmt.Sprintf("Course %s in PreferredRooms", nid)
 		rms := GetRefList(id2node, n.PreferredRooms, msg)
+
+		// Get lesson lengths
+		llen := []int{}
+		if n.SplitHoursPerWeek != "" {
+			hpw := strings.Split(n.SplitHoursPerWeek, "+")
+			for _, l := range hpw {
+				if l != "" {
+					ll, err := strconv.Atoi(l)
+					if err != nil {
+						log.Fatalf("*ERROR* Course %s:\n"+
+							"  ++ SplitHoursPerWeek = %s\n",
+							nid, n.SplitHoursPerWeek)
+					}
+					llen = append(llen, ll)
+				}
+			}
+		} else if n.HoursPerWeek != 0.0 {
+			llen = append(llen, int(n.HoursPerWeek))
+		} // else no lessons
+
 		if n.Categories != "" {
 			msg := fmt.Sprintf("Category in Course %s", nid)
 			reflist := GetRefList(id2node, n.Categories, msg)
@@ -63,7 +84,6 @@ func readCourses(
 						//
 						if strings.HasPrefix(catnode.Shortcut, "_") {
 							// Part of a block.
-							llen := []int{}
 							tcourse := &tmpCourse{
 								Id:             nid,
 								Subjects:       sbjs,
@@ -71,51 +91,40 @@ func readCourses(
 								Teachers:       tchs,
 								PreferredRooms: rms,
 							}
-							if n.SplitHoursPerWeek != "" {
-								hpw := strings.Split(n.SplitHoursPerWeek, "+")
-								for _, l := range hpw {
-									if l != "" {
-										ll, err := strconv.Atoi(l)
-										if err != nil {
-											log.Fatalf("*ERROR* Course %s:\n"+
-												"  ++ SplitHoursPerWeek = %s\n",
-												nid, n.SplitHoursPerWeek)
-										}
-										llen = append(llen, ll)
-									}
-								}
-							} else if n.HoursPerWeek != 0.0 {
-								llen = append(llen, int(n.HoursPerWeek))
-							} else {
+
+							if len(llen) == 0 {
 								// A SubCourse.
 								xc := xcourses[catnode.Shortcut]
 								xc.subs = append(xc.subs, tcourse)
 								xcourses[catnode.Shortcut] = xc
-								continue
+							} else {
+								// A SuperCourse
+								xc := xcourses[catnode.Shortcut]
+								if xc.super != nil {
+									log.Fatalf("*ERROR* Block with two"+
+										" SuperCourses: %s\n",
+										catnode.Shortcut)
+								}
+								xc.super = tcourse
+								xc.lessons = llen
+								xcourses[catnode.Shortcut] = xc
 							}
-							// A SuperCourse
-							xc := xcourses[catnode.Shortcut]
-							if xc.super != nil {
-								log.Fatalf(
-									"*ERROR* Block with two SuperCourses: %s\n",
-									catnode.Shortcut)
-							}
-							xc.super = tcourse
-							xc.lessons = llen
-							xcourses[catnode.Shortcut] = xc
 							continue
 						}
 					}
 				}
 			}
 		}
-		outdata.Courses = append(outdata.Courses, w365tt.Course{
-			Id:             nid,
-			Subjects:       sbjs,
-			Groups:         grps,
-			Teachers:       tchs,
-			PreferredRooms: rms,
-		})
+		if len(llen) != 0 {
+			outdata.Courses = append(outdata.Courses, w365tt.Course{
+				Id:             nid,
+				Subjects:       sbjs,
+				Groups:         grps,
+				Teachers:       tchs,
+				PreferredRooms: rms,
+			})
+			courseLessons[nid] = llen
+		} // else Course with no lessons
 	}
 	for key, xc := range xcourses {
 		fmt.Printf("\n *** XCOURSE: %s\n  %+v\n", key, xc)
@@ -128,6 +137,9 @@ func readCourses(
 			Subject: sc.Subjects[0],
 			// All other fields are ignored.
 		})
+		courseLessons[scid] = xc.lessons
+
+		// Now the SubCourses
 		for _, sbc := range xc.subs {
 			outdata.SubCourses = append(outdata.SubCourses, w365tt.SubCourse{
 				Id:             sbc.Id,
@@ -139,4 +151,5 @@ func readCourses(
 			})
 		}
 	}
+	return courseLessons
 }

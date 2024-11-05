@@ -63,3 +63,13 @@ func readLessons(
 	}
 	return courseLlist
 }
+
+// TODO
+func makeLessons(
+	outdata *w365tt.DbTopLevel,
+	id2node map[w365tt.Ref]interface{},
+	courseLessons map[w365tt.Ref][]int,
+	lessons map[w365tt.Ref][]*Lesson,
+) {
+
+}

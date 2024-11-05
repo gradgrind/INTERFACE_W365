@@ -70,15 +70,19 @@ func ConvertToJSON(f365xml string) string {
 		id2node[n.IdStr()] = n
 	}
 	readClasses(&outdata, id2node, indata.Classes)
-	readCourses(&outdata, id2node, indata.Courses)
+	courseLessons := readCourses(&outdata, id2node, indata.Courses)
+	// courseLessons maps course ref -> list of lesson lengths
 	schedmap := readSchedules(id2node, indata.Schedules)
 
 	llist, ok := schedmap[SCHEDULE_NAME]
 	if !ok {
 		log.Printf("*WARNING* No Schedule with Name=%s\n", SCHEDULE_NAME)
 	}
-	courseLessons := readLessons(id2node, indata.Lessons, llist)
-	//TODO: Generate w365tt.Lessons
+	lessons := readLessons(id2node, indata.Lessons, llist)
+	// lessons maps course ref -> list of existing lesson pointers
+
+	// Generate w365tt.Lessons
+	makeLessons(&outdata, id2node, courseLessons, lessons)
 
 	// Save as JSON
 	f := strings.TrimSuffix(root.Path, filepath.Ext(root.Path)) + ".json"
