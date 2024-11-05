@@ -14,6 +14,8 @@ import (
 	"strings"
 )
 
+const SCHEDULE_NAME = "Vorlage"
+
 func ReadXML(xmlpath string) W365XML {
 	// Open the  XML file
 	xmlFile, err := os.Open(xmlpath)
@@ -69,9 +71,14 @@ func ConvertToJSON(f365xml string) string {
 	}
 	readClasses(&outdata, id2node, indata.Classes)
 	readCourses(&outdata, id2node, indata.Courses)
-	readEpochPlanCourses(&outdata, id2node, indata.EpochPlanCourses)
-	readLessons(&outdata, id2node, indata.Lessons)
-	// Currently no SuperCourses, SubCourses or Constraints
+	schedmap := readSchedules(id2node, indata.Schedules)
+
+	llist, ok := schedmap[SCHEDULE_NAME]
+	if !ok {
+		log.Printf("*WARNING* No Schedule with Name=%s\n", SCHEDULE_NAME)
+	}
+	courseLessons := readLessons(id2node, indata.Lessons, llist)
+	//TODO: Generate w365tt.Lessons
 
 	// Save as JSON
 	f := strings.TrimSuffix(root.Path, filepath.Ext(root.Path)) + ".json"
@@ -206,10 +213,10 @@ func readRooms(
 		}
 		msg := fmt.Sprintf("Room %s in Absences", nid)
 		for _, ai := range GetRefList(id2node, n.Absences, msg) {
-			an := id2node[ai]
+			an := id2node[ai].(Absence)
 			r.NotAvailable = append(r.NotAvailable, w365tt.TimeSlot{
-				Day:  an.(Absence).Day,
-				Hour: an.(Absence).Hour,
+				Day:  an.Day,
+				Hour: an.Hour,
 			})
 		}
 		sortAbsences(r.NotAvailable)
@@ -355,65 +362,17 @@ func readClasses(
 	}
 }
 
-func readEpochPlanCourses(
-	outdata *w365tt.DbTopLevel,
+func readSchedules(
 	id2node map[w365tt.Ref]interface{},
-	items []EpochPlanCourse,
-) {
-	// These are currently handled as normal Courses.
+	items []Schedule,
+) map[string][]w365tt.Ref {
+	// These serve only to determine which Lesson elements are relevant.
+	smap := map[string][]w365tt.Ref{} // Name -> Lesson Ref list
 	for _, n := range items {
-		nid := addId(id2node, &n)
-		if nid == "" {
-			continue
-		}
-		msg := fmt.Sprintf("EpochPlanCourse %s in Subjects", nid)
-		sbjs := GetRefList(id2node, n.Subjects, msg)
-		msg = fmt.Sprintf("EpochPlanCourse %s in Groups", nid)
-		grps := GetRefList(id2node, n.Groups, msg)
-		msg = fmt.Sprintf("EpochPlanCourse %s in Teachers", nid)
-		tchs := GetRefList(id2node, n.Teachers, msg)
-		msg = fmt.Sprintf("EpochPlanCourse %s in PreferredRooms", nid)
-		rms := GetRefList(id2node, n.PreferredRooms, msg)
-		outdata.Courses = append(outdata.Courses, w365tt.Course{
-			Id:             nid,
-			Subjects:       sbjs,
-			Groups:         grps,
-			Teachers:       tchs,
-			PreferredRooms: rms,
-		})
+		msg := fmt.Sprintf("Bad Lesson Ref in Schedule %s", n.Id)
+		smap[n.Name] = GetRefList(id2node, n.Lessons, msg)
 	}
-}
-
-func readLessons(
-	outdata *w365tt.DbTopLevel,
-	id2node map[w365tt.Ref]interface{},
-	items []Lesson,
-) {
-	for _, n := range items {
-		nid := addId(id2node, &n)
-		if nid == "" {
-			continue
-		}
-		if _, ok := id2node[n.Course]; !ok {
-			log.Printf("Lesson with invalid Course: %s\n", nid)
-			continue
-		}
-		dur := 1
-		if n.DoubleLesson {
-			// Currently none, pending changes
-			dur = 2
-		}
-		msg := fmt.Sprintf("Course %s in LocalRooms", nid)
-		outdata.Lessons = append(outdata.Lessons, w365tt.Lesson{
-			Id:       nid,
-			Course:   n.Course,
-			Duration: dur,
-			Day:      n.Day,
-			Hour:     n.Hour,
-			Fixed:    n.Fixed,
-			Rooms:    GetRefList(id2node, n.LocalRooms, msg),
-		})
-	}
+	return smap
 }
 
 func readCategories(

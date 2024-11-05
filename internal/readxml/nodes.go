@@ -187,43 +187,17 @@ func (n *Course) IdStr() w365tt.Ref {
 	return n.Id
 }
 
-type EpochPlanCourse struct {
-	Id               w365tt.Ref `xml:",attr"`
-	ListPosition     float32    `xml:",attr"` // Is this used?
-	Name             string     `xml:",attr"` // Is this used?
-	Shortcut         string     `xml:",attr"` // Is this used?
-	Subjects         RefList    `xml:",attr"` // can be more than one!
-	Groups           RefList    `xml:",attr"` // either a Group or a Class?
-	Teachers         RefList    `xml:",attr"`
-	DoubleLessonMode string     `xml:",attr"` // often "1,2"
-	PreferredRooms   RefList    `xml:",attr"`
-	Categories       RefList    `xml:",attr"` // Is this used?
-	//+ Color string  `xml:",attr"` // "#ffcc00" // Is this used?
-
-	//+ HoursPerWeek     float32 `xml:",attr"` // always 0.0?
-	//+ EpochWeeks float32 `xml:",attr"` // always 0.0?
-
-	// These seem to be always empty. Are they relevant?
-	//+ EpochSlots        string `xml:",attr"` // What is this?
-	//+ SplitEpochWeeks   string `xml:",attr"` // What is this?
-	//+ SplitHoursPerWeek string `xml:",attr"` // What is this?
-}
-
-func (n *EpochPlanCourse) IdStr() w365tt.Ref {
-	return n.Id
-}
-
 type Lesson struct {
-	Id           w365tt.Ref `xml:",attr"`
-	Course       w365tt.Ref `xml:",attr"`
-	Day          int        `xml:",attr"`
-	Hour         int        `xml:",attr"`
-	DoubleLesson bool       `xml:",attr"` // What exactly does this mean?
-	Fixed        bool       `xml:",attr"`
-	LocalRooms   RefList    `xml:",attr"`
-	EpochPlan    w365tt.Ref `xml:",attr"` // What is this? Not relevant?
+	Id     w365tt.Ref `xml:",attr"`
+	Course w365tt.Ref `xml:",attr"`
+	Day    int        `xml:",attr"`
+	Hour   int        `xml:",attr"`
+	//DoubleLesson bool       `xml:",attr"` // What exactly does this mean?
+	Fixed      bool    `xml:",attr"`
+	LocalRooms RefList `xml:",attr"`
+	//EpochPlan    w365tt.Ref `xml:",attr"` // What is this? Not relevant?
 	// If this entry is not empty, the Course field may be an EpochPlanCourse ... or nothing!
-	EpochPlanGrade w365tt.Ref `xml:",attr"` // What is this?
+	//EpochPlanGrade w365tt.Ref `xml:",attr"` // What is this?
 }
 
 func (n *Lesson) IdStr() w365tt.Ref {
@@ -249,6 +223,12 @@ type W365XML struct { // The root node.
 	Scenarios   []Scenario `xml:"Scenario"`
 }
 
+type Schedule struct {
+	Id      w365tt.Ref
+	Name    string
+	Lessons RefList
+}
+
 type SchoolState struct {
 	ActiveScenario w365tt.Ref `xml:",attr"`
 	SchoolName     string     `xml:",attr"`
@@ -261,17 +241,17 @@ type Scenario struct { // Contains the main data to be processed.
 	Description string     `xml:"Decription,attr"` // sic
 
 	// Child nodes:
-	Days             []Day             `xml:"Day"`
-	Hours            []Hour            `xml:"TimedObject"`
-	Absences         []Absence         `xml:"Absence"`
-	Teachers         []Teacher         `xml:"Teacher"`
-	Subjects         []Subject         `xml:"Subject"`
-	Rooms            []Room            `xml:"Room"`
-	Classes          []Class           `xml:"Grade"`
-	Groups           []Group           `xml:"Group"`
-	Divisions        []Division        `xml:"GradePartiton"`
-	Courses          []Course          `xml:"Course"`
-	EpochPlanCourses []EpochPlanCourse `xml:"EpochPlanCourse"`
-	Lessons          []Lesson          `xml:"Lesson"`
-	Categories       []Category        `xml:"Category"`
+	Days       []Day      `xml:"Day"`
+	Hours      []Hour     `xml:"TimedObject"`
+	Absences   []Absence  `xml:"Absence"`
+	Teachers   []Teacher  `xml:"Teacher"`
+	Subjects   []Subject  `xml:"Subject"`
+	Rooms      []Room     `xml:"Room"`
+	Classes    []Class    `xml:"Grade"`
+	Groups     []Group    `xml:"Group"`
+	Divisions  []Division `xml:"GradePartiton"`
+	Courses    []Course   `xml:"Course"`
+	Lessons    []Lesson   `xml:"Lesson"`
+	Schedules  []Schedule `xml:"Schedule"`
+	Categories []Category `xml:"Category"`
 }
