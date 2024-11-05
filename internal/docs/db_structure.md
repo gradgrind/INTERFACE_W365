@@ -1,31 +1,34 @@
+# Current Database Structure
+
+Date: 31.10.2024
+
+```
 package db
 
 // The structures used for the "database"
 //TODO: Currently dealing only with the elements needed for the timetable
 
-type DbRef int // Element reference
+type Ref string // Element reference
 
 type Info struct {
 	Institution        string
 	FirstAfternoonHour int
 	MiddayBreak        []int
-	Reference          interface{}
+	Reference          string
 }
 
 type Day struct {
-	Id        DbRef
-	Name      string
-	Tag       string
-	Reference interface{}
+	Id   Ref
+	Name string
+	Tag  string
 }
 
 type Hour struct {
-	Id        DbRef
-	Name      string
-	Tag       string
-	Start     string
-	End       string
-	Reference interface{}
+	Id    Ref
+	Name  string
+	Tag   string
+	Start string
+	End   string
 }
 
 type TimeSlot struct {
@@ -34,7 +37,7 @@ type TimeSlot struct {
 }
 
 type Teacher struct {
-	Id               DbRef
+	Id               Ref
 	Name             string
 	Tag              string
 	Firstname        string
@@ -46,45 +49,40 @@ type Teacher struct {
 	MaxGapsPerWeek   int
 	MaxAfternoons    int
 	LunchBreak       bool
-	Reference        interface{}
 }
 
 type Subject struct {
-	Id        DbRef
-	Name      string
-	Tag       string
-	Reference interface{}
+	Id   Ref
+	Name string
+	Tag  string
 }
 
 type Room struct {
-	Id           DbRef
+	Id           Ref
 	Name         string
 	Tag          string
 	NotAvailable []TimeSlot
-	Reference    interface{}
 }
 
 type RoomGroup struct {
-	Id        DbRef
-	Name      string
-	Tag       string
-	Rooms     []DbRef
-	Reference interface{}
+	Id    Ref
+	Name  string
+	Tag   string
+	Rooms []Ref
 }
 
 type RoomChoiceGroup struct {
-	Id        DbRef
-	Name      string
-	Tag       string
-	Rooms     []DbRef
-	Reference interface{}
+	Id    Ref
+	Name  string
+	Tag   string `json:"Shortcut"`
+	Rooms []Ref
 }
 
 type Class struct {
-	Id               DbRef
+	Id               Ref
 	Name             string
 	Tag              string
-	Level            int
+	Year             int
 	Letter           string
 	NotAvailable     []TimeSlot
 	Divisions        []Division
@@ -95,55 +93,48 @@ type Class struct {
 	MaxAfternoons    int
 	LunchBreak       bool
 	ForceFirstHour   bool
-	Reference        interface{}
 }
 
 type Group struct {
-	Id        DbRef
-	Tag       string
-	Reference interface{}
+	Id  Ref
+	Tag string
 }
 
 type Division struct {
-	Name      string
-	Groups    []DbRef
-	Reference interface{}
+	Name   string
+	Groups []Ref
 }
 
 type Course struct {
-	Id        DbRef
-	Subject   DbRef
-	Groups    []DbRef
-	Teachers  []DbRef
-	Room      DbRef // Room, RoomGroup or RoomChoiceGroup Element
-	Reference interface{}
+	Id       Ref
+	Subject  Ref
+	Groups   []Ref
+	Teachers []Ref
+	Room     Ref // Room, RoomGroup or RoomChoiceGroup Element
 }
 
 type SuperCourse struct {
-	Id        DbRef
-	Subject   DbRef
-	Reference interface{}
+	Id      Ref
+	Subject Ref
 }
 
 type SubCourse struct {
-	Id          DbRef
-	SuperCourse DbRef
-	Subject     DbRef
-	Groups      []DbRef
-	Teachers    []DbRef
-	Room        DbRef // Room, RoomGroup or RoomChoiceGroup Element
-	Reference   interface{}
+	Id          Ref
+	SuperCourse Ref
+	Subject     Ref
+	Groups      []Ref
+	Teachers    []Ref
+	Room        Ref // Room, RoomGroup or RoomChoiceGroup Element
 }
 
 type Lesson struct {
-	Id        DbRef
-	Course    DbRef // Course or SuperCourse Elements
-	Duration  int
-	Day       int
-	Hour      int
-	Fixed     bool
-	Rooms     []DbRef // only Room Elements
-	Reference interface{}
+	Id       Ref
+	Course   Ref // Course or SuperCourse Elements
+	Duration int
+	Day      int
+	Hour     int
+	Fixed    bool
+	Rooms    []Ref // only Room Elements
 }
 
 type DbTopLevel struct {
@@ -163,3 +154,4 @@ type DbTopLevel struct {
 	Lessons          []Lesson
 	Constraints      map[string]interface{}
 }
+```

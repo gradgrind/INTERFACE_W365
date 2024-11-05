@@ -23,10 +23,10 @@ Grundsätzlich könnten diese so bleiben, wie sie sind. Es müssten nur überfl�
 Einige Element-Typen sind allerdings nicht wirklich „Top-Level-Elemente“ mit unabhängiger Existenz – deren Elemente gehören praktisch einem anderen Element. Das sind:
 
  - Absence (gehört einem Teacher-, Grade- oder Room-Element)
- - GradePartiton (gehört einem Grade-Element)
+ - GradePartit[i]on (gehört einem Grade-Element)
  - Fraction (gehört einem Lesson-Element)
 
-Die Absence- und GradePartiton-Elemente würde ich, in vereinfachter Form (und ohne Id-Feld) als Eigenschaften der Elemente, denen sie gehören, umgestalten. Die Fraction-Elemente würde ich völlig weglassen, da das Schnittstellenprogramm in einer für sich geeigneten Form aus den GradePartiton-Elementen und den Group-Referenzen der Course-Elemente besser erstellen kann.
+Die Absence- und GradePartit[i]on-Elemente würde ich, in vereinfachter Form (und ohne Id-Feld) als Eigenschaften der Elemente, denen sie gehören, umgestalten. Die Fraction-Elemente würde ich völlig weglassen, da das Schnittstellenprogramm in einer für sich geeigneten Form aus den GradePartit[i]on-Elementen und den Group-Referenzen der Course-Elemente besser erstellen kann.
 
 Meine Wunschvorstellung für die Datenstruktur würde dann ungefähr wie unten dargestellt aussehen (als JSON-Dokument gedacht).
 
@@ -66,7 +66,13 @@ Neu sind hier „W365TT“, „RoomGroup“, „SubCourse“ und „Constraint�
 
 #### W365TT
 
-In diesem Objekt könnten allgemeine Informationen oder Eigenschaften, die nirgendwo anders richtig passen, erscheinen.
+In diesem Objekt könnten allgemeine Informationen oder Eigenschaften, die nirgendwo anders richtig passen, erscheinen, z.B.:
+```
+  "W365TT": {
+    "SchoolName": "Musterschule",
+    "Scenario": "96138a85-d78f-4bd0-a5a7-bc8debe29320"
+  },
+```
 
 #### RoomGroups
 
@@ -81,6 +87,8 @@ Für die eigentliche Stundenplanung braucht man nur Lesson-Elemente. Die Kursele
 Diese Objekte sind noch zu definieren.
 
 ### Die Top-Level-Elemente
+
+Ich habe in jedem Element ein „Type“-Eigenschaft, das den Typ des Elements angibt. Da die Elementtypen über die Datenstruktur erkennbar sind, sind diese Felder nicht wirklich notwendig und könnten weggelassen werden. Vielleicht helfen sie aber, die JSON-Dateien etwas übersichtlicher zu machen. 
 
 #### Day
 
@@ -139,7 +147,7 @@ Die Eigenschaften „FirstAfternoonHour“ und „MiddayBreak“ wären vielleic
 }
 ```
 
-Bei den Constraints bedeutet -1, dass der Constraint nicht aktiv ist.
+Bei den Min-/Max-Constraints bedeutet -1, dass der Constraint nicht aktiv ist.
 
 #### Subject
 
@@ -186,7 +194,7 @@ Bei den Räumen verstehe ich die Regeln so:
 
  - Die Room-Elemente stehen für die real vorhandenen Räume.
  - Die Rooms-Eigenschaft eines RoomGroup-Elements enthält nur Room-Referenzen. Diese Räume werden für die Stunde unbedingt gebraucht, sind also Pflichträume.
- - Ein Kurs (Course- oder SubCourse-Element) kann über seine PreferredRooms-Eigenschaft eine Liste Room-Referenzen angeben. Von dieser Liste muss eins dieser Room-Elemente für jede Stunde (Lesson-Element) des Kurses zur Verfügung stehen. Die einzelnen Stunden können unterschiedliche Räume haben. Diese Liste kann auch leer sein. Alternativ kann die Liste aus *einer* RoomGroup-Referenz bestehen. Dann braucht jede Stunde alle Räume in der Raumgruppe.
+ - Ein Kurs (Course- oder SubCourse-Element) kann über seine PreferredRooms-Eigenschaft eine Liste Room-Referenzen angeben. Von dieser Liste muss eins dieser Room-Elemente für jede Stunde (Lesson-Element) des Kurses zur Verfügung stehen. Die einzelnen Stunden können unterschiedliche Räume haben. Diese Liste kann auch leer sein. Alternativ kann die Liste aus *einer* RoomGroup-Referenz bestehen. Dann braucht jede Stunde alle Räume der Raumgruppe.
 
 #### Class
 
@@ -232,6 +240,7 @@ Bei den Räumen verstehe ich die Regeln so:
 	"ForceFirstHour":   true
 }
 ```
+Ich habe hier ein „Shortcut“-Eigenschaft hinzugefügt (= Level + Letter) – weil es mir nützlich erscheint.
 
 #### Group
 
@@ -335,7 +344,8 @@ Das Ziel des Course-Wertes kann ein Course- oder ein SuperCourse-Element sein.
 Ein nicht platziertes Lesson-Element hätte:
 
 ```
-	"Day":      -1,
-	"Hour":     0,
-    "Fixed":    false,
+	"Day":          -1,
+	"Hour":         0,
+    "Fixed":        false,
+    "LocalRooms":   []
 ```

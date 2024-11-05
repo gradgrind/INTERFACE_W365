@@ -5,10 +5,19 @@ import (
 	"encoding/json"
 	"encoding/xml"
 	"fmt"
-	"gradgrind/INTERFACE_W365/internal/db"
+	"gradgrind/INTERFACE_W365/internal/w365tt"
 	"log"
 	"strings"
 )
+
+type Ref = w365tt.Ref
+
+const CLASS_GROUP_SEP = "."
+const ATOMIC_GROUP_SEP1 = "#"
+const ATOMIC_GROUP_SEP2 = "~"
+const VIRTUAL_ROOM_PREFIX = "!"
+const LUNCH_BREAK_TAG = "-lb%d-"
+const LUNCH_BREAK_NAME = "Lunch Break"
 
 const fet_version = "6.25.2"
 
@@ -34,43 +43,77 @@ type fet struct {
 	Teachers_List    fetTeachersList
 	Subjects_List    fetSubjectsList
 	Rooms_List       fetRoomsList
-	/*
-		Students_List    fetStudentsList
-		//Buildings_List
-		Activity_Tags_List     fetActivityTags
-		Activities_List        fetActivitiesList
-	*/
+	Students_List    fetStudentsList
+	//Buildings_List
+	Activity_Tags_List     fetActivityTags
+	Activities_List        fetActivitiesList
 	Time_Constraints_List  timeConstraints
 	Space_Constraints_List spaceConstraints
 }
 
+type virtualRoom struct {
+	rooms       []Ref   // only Rooms
+	roomChoices [][]Ref // list of pure Room lists
+}
+
+type courseInfo struct {
+	subject    Ref
+	groups     []Ref
+	teachers   []Ref
+	room       virtualRoom
+	lessons    []*w365tt.Lesson
+	activities []int
+}
+
 type fetInfo struct {
-	db               *db.DbTopLevel
-	ref2fet          map[db.DbRef]string
-	ref2grouponly    map[db.DbRef]string
-	days             []string
-	hours            []string
-	fetdata          fet
-	courses          map[db.DbRef]int
-	subcourses       map[db.DbRef]int
-	supercourses     map[db.DbRef]int
-	supersubs        map[db.DbRef][]db.DbRef
-	classdivisions   map[db.DbRef][][]db.DbRef
-	atomicgroups     map[db.DbRef][]AtomicGroup
-	fixed_activities []bool
+	db            *w365tt.DbTopLevel
+	ref2fet       map[Ref]string
+	ref2grouponly map[Ref]string
+	days          []string
+	hours         []string
+	fetdata       fet
+	// These cover only courses and groups with lessons:
+	ONLY_FIXED bool // normally true, false allows generation of
+	// placement constraints for non-fixed lessons
+	WITHOUT_ROOM_PLACEMENTS bool
+	superSubs               map[Ref][]Ref
+	courseInfo              map[Ref]courseInfo // Key can be Course or SuperCourse
+	classDivisions          map[Ref][][]Ref
+	atomicGroups            map[Ref][]AtomicGroup
+	fetVirtualRooms         map[string]string // cache for FET virtual rooms,
+	// "hash" -> FET-virtual-room tag
+	fetVirtualRoomN         map[string]int // FET-virtual-room tag -> number of room sets
+	differentDayConstraints map[Ref][]int  // Retain the indexes of the entries
+	// in the ConstraintMinDaysBetweenActivities list for each course. This
+	// allows the default constraints to be modified later.
 }
 
 type timeConstraints struct {
 	XMLName xml.Name `xml:"Time_Constraints_List"`
 	//
-	ConstraintBasicCompulsoryTime basicTimeConstraint
-	//	ConstraintStudentsSetNotAvailableTimes []studentsNotAvailable
-	ConstraintTeacherNotAvailableTimes           []teacherNotAvailable
-	ConstraintActivityPreferredStartingTime      []startingTime
-	ConstraintMinDaysBetweenActivities           []minDaysBetweenActivities
-	ConstraintStudentsSetMaxHoursDailyInInterval []lunchBreak
-	ConstraintStudentsSetMaxGapsPerWeek          []maxGapsPerWeek
-	ConstraintStudentsSetMinHoursDaily           []minLessonsPerDay
+	ConstraintBasicCompulsoryTime          basicTimeConstraint
+	ConstraintStudentsSetNotAvailableTimes []studentsNotAvailable
+	ConstraintTeacherNotAvailableTimes     []teacherNotAvailable
+
+	ConstraintActivityPreferredStartingTime []startingTime
+	ConstraintActivitiesPreferredTimeSlots  []preferredSlots
+	ConstraintMinDaysBetweenActivities      []minDaysBetweenActivities
+
+	ConstraintStudentsSetMaxGapsPerDay                  []maxGapsPerDay
+	ConstraintStudentsSetMaxGapsPerWeek                 []maxGapsPerWeek
+	ConstraintStudentsSetMinHoursDaily                  []minLessonsPerDay
+	ConstraintStudentsSetMaxHoursDaily                  []maxLessonsPerDay
+	ConstraintStudentsSetIntervalMaxDaysPerWeek         []maxDaysinIntervalPerWeek
+	ConstraintStudentsSetEarlyMaxBeginningsAtSecondHour []maxLateStarts
+	ConstraintStudentsSetMaxHoursDailyInInterval        []lunchBreak
+
+	ConstraintTeacherMaxDaysPerWeek          []maxDaysT
+	ConstraintTeacherMaxGapsPerDay           []maxGapsPerDayT
+	ConstraintTeacherMaxGapsPerWeek          []maxGapsPerWeekT
+	ConstraintTeacherMaxHoursDailyInInterval []lunchBreakT
+	ConstraintTeacherMinHoursDaily           []minLessonsPerDayT
+	ConstraintTeacherMaxHoursDaily           []maxLessonsPerDayT
+	ConstraintTeacherIntervalMaxDaysPerWeek  []maxDaysinIntervalPerWeekT
 }
 
 type basicTimeConstraint struct {
@@ -80,12 +123,10 @@ type basicTimeConstraint struct {
 }
 
 type spaceConstraints struct {
-	XMLName                        xml.Name `xml:"Space_Constraints_List"`
-	ConstraintBasicCompulsorySpace basicSpaceConstraint
-	/*
-	   ConstraintActivityPreferredRoom  []fixedRoom
-	   ConstraintActivityPreferredRooms []roomChoice
-	*/
+	XMLName                          xml.Name `xml:"Space_Constraints_List"`
+	ConstraintBasicCompulsorySpace   basicSpaceConstraint
+	ConstraintActivityPreferredRooms []roomChoice
+	ConstraintActivityPreferredRoom  []placedRoom
 }
 
 type basicSpaceConstraint struct {
@@ -94,17 +135,11 @@ type basicSpaceConstraint struct {
 	Active            bool
 }
 
-func make_fet_file(dbdata *db.DbTopLevel,
-
-// activities []wzbase.Activity,
-// course2activities map[int][]int,
-// subject_activities []wzbase.SubjectGroupActivities,
-) string {
-	//TODO--
-	fmt.Printf("\n????? %+v\n", dbdata.Info)
+func make_fet_file(dbdata *w365tt.DbTopLevel) string {
+	//fmt.Printf("\n????? %+v\n", dbdata.Info)
 
 	// Build ref-index -> fet-key mapping
-	ref2fet := map[db.DbRef]string{}
+	ref2fet := map[Ref]string{}
 	for _, r := range dbdata.Subjects {
 		ref2fet[r.Id] = r.Tag
 	}
@@ -114,7 +149,7 @@ func make_fet_file(dbdata *db.DbTopLevel,
 	for _, r := range dbdata.Teachers {
 		ref2fet[r.Id] = r.Tag
 	}
-	ref2grouponly := map[db.DbRef]string{}
+	ref2grouponly := map[Ref]string{}
 	for _, r := range dbdata.Groups {
 		ref2grouponly[r.Id] = r.Tag
 	}
@@ -123,12 +158,12 @@ func make_fet_file(dbdata *db.DbTopLevel,
 		// Handle the groups
 		for _, d := range r.Divisions {
 			for _, g := range d.Groups {
-				ref2fet[g] = fmt.Sprintf("%s.%s", r.Tag, ref2grouponly[g])
+				ref2fet[g] = r.Tag + CLASS_GROUP_SEP + ref2grouponly[g]
 			}
 		}
 	}
 
-	fmt.Printf("ref2fet: %v\n", ref2fet)
+	//fmt.Printf("ref2fet: %v\n", ref2fet)
 
 	fetinfo := fetInfo{
 		db:            dbdata,
@@ -148,6 +183,11 @@ func make_fet_file(dbdata *db.DbTopLevel,
 					Weight_Percentage: 100, Active: true},
 			},
 		},
+		ONLY_FIXED:              true,
+		WITHOUT_ROOM_PLACEMENTS: true,
+		fetVirtualRooms:         map[string]string{},
+		fetVirtualRoomN:         map[string]int{},
+		differentDayConstraints: map[Ref][]int{},
 	}
 
 	getDays(&fetinfo)
@@ -155,24 +195,20 @@ func make_fet_file(dbdata *db.DbTopLevel,
 	getTeachers(&fetinfo)
 	getSubjects(&fetinfo)
 	getRooms(&fetinfo)
-	readCourseIndexes(&fetinfo)
+	fmt.Println("=====================================")
+	gatherCourseInfo(&fetinfo)
+
+	//readCourseIndexes(&fetinfo)
 	makeAtomicGroups(&fetinfo)
-	/*
-		getClasses(&fetinfo)
-		getActivities(&fetinfo, activities, course2activities)
-		gap_subject_activities(&fetinfo, subject_activities)
-	*/
+	//fmt.Println("\n +++++++++++++++++++++++++++")
+	//printAtomicGroups(&fetinfo)
+	getClasses(&fetinfo)
+	getActivities(&fetinfo)
+
+	addTeacherConstraints(&fetinfo)
+	addClassConstraints(&fetinfo)
 
 	return xml.Header + makeXML(fetinfo.fetdata, 0)
-}
-
-func get_string(val interface{}) string {
-	s, ok := val.(string)
-	if !ok {
-		b, _ := json.Marshal(val)
-		s = string(b)
-	}
-	return strings.Trim(s, "\"")
 }
 
 func getString(val interface{}) string {
