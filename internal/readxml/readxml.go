@@ -191,6 +191,12 @@ func readSubjects(
 	id2node map[w365tt.Ref]interface{},
 	items []Subject,
 ) {
+	slices.SortFunc(items, func(a, b Subject) int {
+		if a.ListPosition < b.ListPosition {
+			return -1
+		}
+		return 1
+	})
 	for _, n := range items {
 		nid := addId(id2node, &n)
 		if nid == "" {
@@ -209,6 +215,12 @@ func readRooms(
 	id2node map[w365tt.Ref]interface{},
 	items []Room,
 ) {
+	slices.SortFunc(items, func(a, b Room) int {
+		if a.ListPosition < b.ListPosition {
+			return -1
+		}
+		return 1
+	})
 	rglist := map[w365tt.Ref]Room{} // RoomGroup elements
 	for _, n := range items {
 		nid := addId(id2node, &n)
@@ -256,6 +268,12 @@ func readTeachers(
 	id2node map[w365tt.Ref]interface{},
 	items []Teacher,
 ) {
+	slices.SortFunc(items, func(a, b Teacher) int {
+		if a.ListPosition < b.ListPosition {
+			return -1
+		}
+		return 1
+	})
 	for _, n := range items {
 		nid := addId(id2node, &n)
 		if nid == "" {
@@ -327,6 +345,12 @@ func readClasses(
 	id2node map[w365tt.Ref]interface{},
 	items []Class,
 ) {
+	slices.SortFunc(items, func(a, b Class) int {
+		if a.ListPosition < b.ListPosition {
+			return -1
+		}
+		return 1
+	})
 	for _, n := range items {
 		nid := addId(id2node, &n)
 		if nid == "" {
