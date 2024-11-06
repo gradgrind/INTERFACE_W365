@@ -1,3 +1,11 @@
 {
-    "cSpell.language": "en,de-DE"
+    "cSpell.language": "en,de-DE",
+    "spellright.language": [
+        "en_GB"
+    ],
+    "spellright.documentTypes": [
+        "markdown",
+        "latex",
+        "plaintext"
+    ]
 }
