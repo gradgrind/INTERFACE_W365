@@ -224,9 +224,9 @@ type W365XML struct { // The root node.
 }
 
 type Schedule struct {
-	Id      w365tt.Ref
-	Name    string
-	Lessons RefList
+	Id      w365tt.Ref `xml:",attr"`
+	Name    string     `xml:",attr"`
+	Lessons RefList    `xml:",attr"`
 }
 
 type SchoolState struct {

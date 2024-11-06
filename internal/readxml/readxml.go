@@ -72,17 +72,16 @@ func ConvertToJSON(f365xml string) string {
 	readClasses(&outdata, id2node, indata.Classes)
 	courseLessons := readCourses(&outdata, id2node, indata.Courses)
 	// courseLessons maps course ref -> list of lesson lengths
+	readLessons(id2node, indata.Lessons)
 	schedmap := readSchedules(id2node, indata.Schedules)
 
 	llist, ok := schedmap[SCHEDULE_NAME]
 	if !ok {
 		log.Printf("*WARNING* No Schedule with Name=%s\n", SCHEDULE_NAME)
 	}
-	lessons := readLessons(id2node, indata.Lessons, llist)
-	// lessons maps course ref -> list of existing lesson pointers
 
 	// Generate w365tt.Lessons
-	makeLessons(&outdata, id2node, courseLessons, lessons)
+	makeLessons(&outdata, id2node, courseLessons, llist)
 
 	// Save as JSON
 	f := strings.TrimSuffix(root.Path, filepath.Ext(root.Path)) + ".json"
@@ -112,6 +111,12 @@ func readDays(
 	id2node map[w365tt.Ref]interface{},
 	items []Day,
 ) {
+	slices.SortFunc(items, func(a, b Day) int {
+		if a.ListPosition < b.ListPosition {
+			return -1
+		}
+		return 1
+	})
 	for _, n := range items {
 		nid := addId(id2node, &n)
 		if nid == "" {
@@ -130,6 +135,12 @@ func readHours(
 	id2node map[w365tt.Ref]interface{},
 	items []Hour,
 ) {
+	slices.SortFunc(items, func(a, b Hour) int {
+		if a.ListPosition < b.ListPosition {
+			return -1
+		}
+		return 1
+	})
 	for i, n := range items {
 		nid := addId(id2node, &n)
 		if nid == "" {

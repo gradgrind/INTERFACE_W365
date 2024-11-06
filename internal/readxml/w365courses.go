@@ -109,7 +109,7 @@ func readCourses(
 								xc.lessons = llen
 								xcourses[catnode.Shortcut] = xc
 							}
-							continue
+							goto next_course
 						}
 					}
 				}
@@ -125,6 +125,7 @@ func readCourses(
 			})
 			courseLessons[nid] = llen
 		} // else Course with no lessons
+	next_course:
 	}
 	for key, xc := range xcourses {
 		fmt.Printf("\n *** XCOURSE: %s\n  %+v\n", key, xc)

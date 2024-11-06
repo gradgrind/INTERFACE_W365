@@ -32,8 +32,8 @@ func TestX(t *testing.T) {
 }
 
 func TestFet(t *testing.T) {
-	// w365file := "../_testdata/fms.w365"
-	w365file := "../_testdata/test1.json"
+	w365file := "../_testdata/fms_w365.json"
+	//w365file := "../_testdata/test1.json"
 	abspath, err := filepath.Abs(w365file)
 	if err != nil {
 		log.Fatalf("Couldn't resolve file path: %s\n", abspath)
