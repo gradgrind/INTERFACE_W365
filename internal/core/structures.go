@@ -10,7 +10,29 @@ import (
 // The structures used for the "database"
 //TODO: Currently dealing only with the elements needed for the timetable
 
+//+++++ These structures may be used by other database representations.
+
 type Ref string // Element reference
+
+type TimeSlot struct {
+	Day  int
+	Hour int
+}
+
+type Division struct {
+	Name   string
+	Groups []Ref
+}
+
+/*
+type Division struct {
+	Id     Ref
+	Name   string
+	Groups []Ref
+}
+*/
+
+//------
 
 type Info struct {
 	Institution        string
@@ -33,12 +55,9 @@ type Hour struct {
 	End   string
 }
 
-type TimeSlot struct {
-	Day  int
-	Hour int
-}
-
 type Teacher struct {
+	// The "interface{}" fields are actually "int", but as their default
+	// value is -1 rather than 0, it is a bit unsafe to use "int" type.
 	Id               Ref
 	Name             string
 	Tag              string
@@ -81,6 +100,8 @@ type RoomChoiceGroup struct {
 }
 
 type Class struct {
+	// The "interface{}" fields are actually "int", but as their default
+	// value is -1 rather than 0, it is a bit unsafe to use "int" type.
 	Id               Ref
 	Name             string
 	Tag              string
@@ -101,19 +122,6 @@ type Group struct {
 	Id  Ref
 	Tag string
 }
-
-type Division struct {
-	Name   string
-	Groups []Ref
-}
-
-/*
-type Division struct {
-	Id     Ref
-	Name   string
-	Groups []Ref
-}
-*/
 
 type Course struct {
 	Id       Ref
