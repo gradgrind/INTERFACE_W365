@@ -13,6 +13,7 @@ import (
 // and thus their groups – which can then be marked. Finally the divisions
 // can be filtered on the basis of these marked groups.
 
+const CLASS_GROUP_SEP = "."
 const ATOMIC_GROUP_SEP1 = "#"
 const ATOMIC_GROUP_SEP2 = "~"
 
@@ -26,13 +27,22 @@ func filterDivisions(db *core.DbTopLevel) map[core.Ref][][]core.Ref {
 	// Prepare filtered versions of the class Divisions containing only
 	// those Divisions which have Groups used in Lessons.
 
-	// Collect groups used in Lessons. Get them from the
-	// fetinfo.courseInfo.groups map, which only includes courses with lessons.
+	// Collect groups used in Lessons. Get them from the courses in the
+	// db.CourseLessons map, which only includes courses with lessons.
 	usedgroups := map[core.Ref]bool{}
-	for cref, _ := range db.CourseLessons {
-		glist := db.Elements[cref].(core.CourseInterface).GetGroups()
-		for _, g := range glist {
-			usedgroups[g] = true
+	for cref := range db.CourseLessons {
+		csc := db.Elements[cref]
+		c, ok := csc.(*core.Course)
+		if ok {
+			for _, g := range c.Groups {
+				usedgroups[g] = true
+			}
+		} else {
+			for _, sc := range db.SuperSubs[cref] {
+				for _, g := range sc.Groups {
+					usedgroups[g] = true
+				}
+			}
 		}
 	}
 	// Filter the class divisions, discarding the division names.
@@ -52,13 +62,14 @@ func filterDivisions(db *core.DbTopLevel) map[core.Ref][][]core.Ref {
 	return cdivs
 }
 
-func makeAtomicGroups(db *core.DbTopLevel) map[core.Ref][]AtomicGroup {
+func makeAtomicGroups(
+	db *core.DbTopLevel,
+	classDivs map[core.Ref][][]core.Ref,
+) map[core.Ref][]AtomicGroup {
 	// An atomic group is an ordered list of single groups from each division.
 	atomicGroups := map[core.Ref][]AtomicGroup{}
-	// Go through the classes inspecting their Divisions. Retain only those
-	// which have lessons.
-	classDivs := filterDivisions(db)
-	// Go through the classes inspecting their Divisions.
+	// Go through the classes inspecting their Divisions. Only those which
+	// have Lessons are considered.
 	// Build a list-basis for the atomic groups based on the Cartesian product.
 	for _, cl := range db.Classes {
 		divs, ok := classDivs[cl.Id]
@@ -90,7 +101,7 @@ func makeAtomicGroups(db *core.DbTopLevel) map[core.Ref][]AtomicGroup {
 		for _, ag := range agrefs {
 			glist := []string{}
 			for _, gref := range ag {
-				glist = append(glist, db.Elements[gref].(core.Group).Tag)
+				glist = append(glist, db.Elements[gref].(*core.Group).Tag)
 			}
 			ago := AtomicGroup{
 				Class:  cl.Id,
@@ -131,16 +142,16 @@ func makeAtomicGroups(db *core.DbTopLevel) map[core.Ref][]AtomicGroup {
 	return atomicGroups
 }
 
-func getClassOrGroup(db *core.DbTopLevel, ref core.Ref) string {
-	elem := db.Elements[ref]
-	g, ok := elem.(*core.Group)
+func classOrGroup(db *core.DbTopLevel, ref core.Ref) string {
+	// Return the tag for the Class or Group, in the latter case including
+	// the Class.
+	ginfo, ok := db.GroupInfoMap[ref]
 	if ok {
-
+		ctag := db.Elements[ginfo.Class].(*core.Class).Tag
+		return ctag + CLASS_GROUP_SEP + ginfo.Tag
 	}
+	return db.Elements[ginfo.Class].(*core.Class).Tag
 }
-
-//TODO: I need (in core?) an info map for groups, including the class,
-// maybe including tags.
 
 // For testing
 func printAtomicGroups(
@@ -153,14 +164,14 @@ func printAtomicGroups(
 		for _, ag := range atomicGroups[cl.Id] {
 			agls = append(agls, ag.Tag)
 		}
-		fmt.Printf("  ++ %s: %+v\n", fetinfo.ref2fet[cl.Id], agls)
+		fmt.Printf("  ++ %s: %+v\n", cl.Tag, agls)
 		for _, div := range classDivs[cl.Id] {
-			for _, g := range div {
+			for _, gref := range div {
 				agls := []string{}
-				for _, ag := range atomicGroups[g] {
+				for _, ag := range atomicGroups[gref] {
 					agls = append(agls, ag.Tag)
 				}
-				fmt.Printf("    -- %s: %+v\n", fetinfo.ref2fet[g], agls)
+				fmt.Printf("    -- %s: %+v\n", classOrGroup(db, gref), agls)
 			}
 		}
 	}

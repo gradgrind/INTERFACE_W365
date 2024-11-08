@@ -23,6 +23,6 @@ func TestDb(t *testing.T) {
 
 	data := w365tt.LoadJSON(abspath)
 	db := MoveDb(data)
-	db.checkDb()
+	db.CheckDb()
 	fmt.Printf("  --> %+v\n", db)
 }

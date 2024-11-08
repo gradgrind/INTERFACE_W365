@@ -1,7 +1,6 @@
 package tt_engine
 
 import (
-	"fmt"
 	"gradgrind/INTERFACE_W365/internal/core"
 	"gradgrind/INTERFACE_W365/internal/w365tt"
 	"log"
@@ -24,7 +23,9 @@ func TestData(t *testing.T) {
 
 	data := w365tt.LoadJSON(abspath)
 	db := core.MoveDb(data)
+	db.CheckDb()
 	ttdata := initData(db)
 
-	fmt.Printf("*** ResourceMap: %+v\n", ttdata.ResourceMap)
+	printAtomicGroups(db, ttdata.ClassDivisions, ttdata.AtomicGroups)
+	//fmt.Printf("*** ResourceMap: %+v\n", ttdata.ResourceMap)
 }

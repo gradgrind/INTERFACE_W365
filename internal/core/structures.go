@@ -175,10 +175,11 @@ type DbTopLevel struct {
 	Constraints      map[string]any
 
 	// These fields do not belong in the JSON object.
-	Elements      map[Ref]any       `json:"-"`
-	MaxId         int               `json:"-"` // for "indexed" Ids
-	CourseLessons map[Ref][]Ref     `json:"-"`
-	GroupInfoMap  map[Ref]GroupInfo `json:"-"`
+	Elements      map[Ref]any          `json:"-"`
+	MaxId         int                  `json:"-"` // for "indexed" Ids
+	SuperSubs     map[Ref][]*SubCourse `json:"-"`
+	CourseLessons map[Ref][]Ref        `json:"-"`
+	GroupInfoMap  map[Ref]GroupInfo    `json:"-"`
 
 	//???
 	SubjectTags     map[string]Ref    `json:"-"`
@@ -209,7 +210,7 @@ func (db *DbTopLevel) AddElement(ref Ref, element any) {
 	}
 }
 
-func (db *DbTopLevel) checkDb() {
+func (db *DbTopLevel) CheckDb() {
 	// Initializations
 	if db.Info.MiddayBreak == nil {
 		db.Info.MiddayBreak = []int{}
@@ -248,64 +249,81 @@ func (db *DbTopLevel) checkDb() {
 	if len(db.Classes) == 0 {
 		Error.Fatalln("No Classes")
 	}
-	for i, n := range db.Days {
-		db.AddElement(n.Id, &db.Days[i])
+	for i := 0; i < len(db.Days); i++ {
+		n := &db.Days[i]
+		db.AddElement(n.Id, n)
 	}
-	for i, n := range db.Hours {
-		db.AddElement(n.Id, &db.Hours[i])
+	for i := 0; i < len(db.Hours); i++ {
+		n := &db.Hours[i]
+		db.AddElement(n.Id, n)
 	}
-	for i, n := range db.Teachers {
-		db.AddElement(n.Id, &db.Teachers[i])
+	for i := 0; i < len(db.Teachers); i++ {
+		n := &db.Teachers[i]
+		db.AddElement(n.Id, n)
 	}
-	for i, n := range db.Subjects {
-		db.AddElement(n.Id, &db.Subjects[i])
+	for i := 0; i < len(db.Subjects); i++ {
+		n := &db.Subjects[i]
+		db.AddElement(n.Id, n)
 	}
-	for i, n := range db.Rooms {
-		db.AddElement(n.Id, &db.Rooms[i])
+	for i := 0; i < len(db.Rooms); i++ {
+		n := &db.Rooms[i]
+		db.AddElement(n.Id, n)
 	}
-	for i, n := range db.Classes {
-		db.AddElement(n.Id, &db.Classes[i])
+	for i := 0; i < len(db.Classes); i++ {
+		n := &db.Classes[i]
+		db.AddElement(n.Id, n)
 	}
 	if db.RoomGroups == nil {
 		db.RoomGroups = []RoomGroup{}
 	} else {
-		for i, n := range db.RoomGroups {
-			db.AddElement(n.Id, &db.RoomGroups[i])
+		for i := 0; i < len(db.RoomGroups); i++ {
+			n := &db.RoomGroups[i]
+			db.AddElement(n.Id, n)
 		}
 	}
 	if db.RoomChoiceGroups == nil {
 		db.RoomChoiceGroups = []RoomChoiceGroup{}
 	} else {
-		for i, n := range db.RoomChoiceGroups {
-			db.AddElement(n.Id, &db.RoomChoiceGroups[i])
+		for i := 0; i < len(db.RoomChoiceGroups); i++ {
+			n := &db.RoomChoiceGroups[i]
+			db.AddElement(n.Id, n)
 		}
 	}
 	if db.Groups == nil {
 		db.Groups = []Group{}
 	} else {
-		for i, n := range db.Groups {
-			db.AddElement(n.Id, &db.Groups[i])
+		for i := 0; i < len(db.Groups); i++ {
+			n := &db.Groups[i]
+			db.AddElement(n.Id, n)
 		}
 	}
 	if db.Courses == nil {
 		db.Courses = []Course{}
 	} else {
-		for i, n := range db.Courses {
-			db.AddElement(n.Id, &db.Courses[i])
+		for i := 0; i < len(db.Courses); i++ {
+			n := &db.Courses[i]
+			db.AddElement(n.Id, n)
 		}
 	}
 	if db.SuperCourses == nil {
 		db.SuperCourses = []SuperCourse{}
 	} else {
-		for i, n := range db.SuperCourses {
-			db.AddElement(n.Id, &db.SuperCourses[i])
+		for i := 0; i < len(db.SuperCourses); i++ {
+			n := &db.SuperCourses[i]
+			db.AddElement(n.Id, n)
 		}
 	}
+
+	// Collect the SubCourses for each SuperCourse
+	db.SuperSubs = map[Ref][]*SubCourse{}
 	if db.SubCourses == nil {
 		db.SubCourses = []SubCourse{}
 	} else {
-		for i, n := range db.SubCourses {
-			db.AddElement(n.Id, &db.SubCourses[i])
+		for i := 0; i < len(db.SubCourses); i++ {
+			n := &db.SubCourses[i]
+			db.AddElement(n.Id, n)
+			supref := n.SuperCourse
+			db.SuperSubs[supref] = append(db.SuperSubs[supref], n)
 		}
 	}
 
@@ -313,8 +331,9 @@ func (db *DbTopLevel) checkDb() {
 	if db.Lessons == nil {
 		db.Lessons = []Lesson{}
 	} else {
-		for i, n := range db.Lessons {
-			db.AddElement(n.Id, &db.Lessons[i])
+		for i := 0; i < len(db.Lessons); i++ {
+			n := &db.Lessons[i]
+			db.AddElement(n.Id, n)
 			cref := Ref(n.Course)
 			db.CourseLessons[cref] = append(db.CourseLessons[cref], n.Id)
 		}

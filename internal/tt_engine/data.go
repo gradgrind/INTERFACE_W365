@@ -14,6 +14,9 @@ type Resource int
 type TtData struct {
 	ResourceMap  map[core.Ref]int
 	ResourceList []any
+
+	ClassDivisions map[core.Ref][][]core.Ref
+	AtomicGroups   map[core.Ref][]AtomicGroup
 }
 
 // ???
@@ -30,6 +33,8 @@ func initData(db *core.DbTopLevel) *TtData {
 		ResourceMap:  map[core.Ref]int{},
 		ResourceList: []any{nil}, // index 0 is invalid
 	}
+	ttData.ClassDivisions = filterDivisions(db)
+	ttData.AtomicGroups = makeAtomicGroups(db, ttData.ClassDivisions)
 
 	// Teachers
 	for i := 0; i < len(db.Teachers); i++ {
