@@ -1,7 +1,8 @@
-package core
+package tt_engine
 
 import (
 	"fmt"
+	"gradgrind/INTERFACE_W365/internal/core"
 	"gradgrind/INTERFACE_W365/internal/w365tt"
 	"log"
 	"path/filepath"
@@ -9,7 +10,7 @@ import (
 	"testing"
 )
 
-func TestDb(t *testing.T) {
+func TestData(t *testing.T) {
 	w365file := "../_testdata/fms_w365.json"
 	// w365file := "../_testdata/test1.json"
 	abspath, err := filepath.Abs(w365file)
@@ -19,10 +20,11 @@ func TestDb(t *testing.T) {
 
 	stempath := strings.TrimSuffix(abspath, filepath.Ext(abspath))
 	logpath := stempath + ".log"
-	OpenLog(logpath)
+	core.OpenLog(logpath)
 
 	data := w365tt.LoadJSON(abspath)
-	db := MoveDb(data)
-	db.checkDb()
-	fmt.Printf("  --> %+v\n", db)
+	db := core.MoveDb(data)
+	ttdata := initData(db)
+
+	fmt.Printf("*** ResourceMap: %+v\n", ttdata.ResourceMap)
 }

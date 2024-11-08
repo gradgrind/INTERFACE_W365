@@ -56,19 +56,17 @@ type Hour struct {
 }
 
 type Teacher struct {
-	// The "interface{}" fields are actually "int", but as their default
-	// value is -1 rather than 0, it is a bit unsafe to use "int" type.
 	Id               Ref
 	Name             string
 	Tag              string
 	Firstname        string
 	NotAvailable     []TimeSlot
-	MinLessonsPerDay interface{}
-	MaxLessonsPerDay interface{}
-	MaxDays          interface{}
-	MaxGapsPerDay    interface{}
-	MaxGapsPerWeek   interface{}
-	MaxAfternoons    interface{}
+	MinLessonsPerDay int // default = -1
+	MaxLessonsPerDay int // default = -1
+	MaxDays          int // default = -1
+	MaxGapsPerDay    int // default = -1
+	MaxGapsPerWeek   int // default = -1
+	MaxAfternoons    int // default = -1
 	LunchBreak       bool
 }
 
@@ -100,8 +98,6 @@ type RoomChoiceGroup struct {
 }
 
 type Class struct {
-	// The "interface{}" fields are actually "int", but as their default
-	// value is -1 rather than 0, it is a bit unsafe to use "int" type.
 	Id               Ref
 	Name             string
 	Tag              string
@@ -109,11 +105,11 @@ type Class struct {
 	Letter           string
 	NotAvailable     []TimeSlot
 	Divisions        []Division
-	MinLessonsPerDay interface{}
-	MaxLessonsPerDay interface{}
-	MaxGapsPerDay    interface{}
-	MaxGapsPerWeek   interface{}
-	MaxAfternoons    interface{}
+	MinLessonsPerDay int // default = -1
+	MaxLessonsPerDay int // default = -1
+	MaxGapsPerDay    int // default = -1
+	MaxGapsPerWeek   int // default = -1
+	MaxAfternoons    int // default = -1
 	LunchBreak       bool
 	ForceFirstHour   bool
 }
@@ -155,6 +151,12 @@ type Lesson struct {
 	Rooms    []Ref
 }
 
+type GroupInfo struct {
+	Tag      string
+	Class    Ref
+	Division string
+}
+
 type DbTopLevel struct {
 	Info             Info
 	Days             []Day
@@ -170,22 +172,26 @@ type DbTopLevel struct {
 	SuperCourses     []SuperCourse
 	SubCourses       []SubCourse
 	Lessons          []Lesson
-	Constraints      map[string]interface{}
+	Constraints      map[string]any
 
 	// These fields do not belong in the JSON object.
-	Elements        map[Ref]interface{} `json:"-"`
-	MaxId           int                 `json:"-"` // for "indexed" Ids only
-	SubjectTags     map[string]Ref      `json:"-"`
-	SubjectNames    map[string]string   `json:"-"`
-	RoomTags        map[string]Ref      `json:"-"`
-	RoomChoiceNames map[string]Ref      `json:"-"`
+	Elements      map[Ref]any       `json:"-"`
+	MaxId         int               `json:"-"` // for "indexed" Ids
+	CourseLessons map[Ref][]Ref     `json:"-"`
+	GroupInfoMap  map[Ref]GroupInfo `json:"-"`
+
+	//???
+	SubjectTags     map[string]Ref    `json:"-"`
+	SubjectNames    map[string]string `json:"-"`
+	RoomTags        map[string]Ref    `json:"-"`
+	RoomChoiceNames map[string]Ref    `json:"-"`
 }
 
 func (db *DbTopLevel) NewId() Ref {
 	return Ref(fmt.Sprintf("#%d", db.MaxId+1))
 }
 
-func (db *DbTopLevel) AddElement(ref Ref, element interface{}) {
+func (db *DbTopLevel) AddElement(ref Ref, element any) {
 	_, nok := db.Elements[ref]
 	if nok {
 		Error.Fatalf("Element Id defined more than once:\n  %s\n", ref)
@@ -214,14 +220,16 @@ func (db *DbTopLevel) checkDb() {
 		if mb[len(mb)-1]-mb[0] >= len(mb) {
 			Error.Fatalln("MiddayBreak hours not contiguous")
 		}
-
 	}
+
+	//??? These could be FET-specific
 	db.SubjectTags = map[string]Ref{}
 	db.SubjectNames = map[string]string{}
 	db.RoomTags = map[string]Ref{}
 	db.RoomChoiceNames = map[string]Ref{}
+
 	// Initialize the Ref -> Element mapping
-	db.Elements = make(map[Ref]interface{})
+	db.Elements = make(map[Ref]any)
 	if len(db.Days) == 0 {
 		Error.Fatalln("No Days")
 	}
@@ -300,15 +308,43 @@ func (db *DbTopLevel) checkDb() {
 			db.AddElement(n.Id, &db.SubCourses[i])
 		}
 	}
+
+	db.CourseLessons = map[Ref][]Ref{}
 	if db.Lessons == nil {
 		db.Lessons = []Lesson{}
 	} else {
 		for i, n := range db.Lessons {
 			db.AddElement(n.Id, &db.Lessons[i])
+			cref := Ref(n.Course)
+			db.CourseLessons[cref] = append(db.CourseLessons[cref], n.Id)
 		}
 	}
+
 	if db.Constraints == nil {
-		db.Constraints = make(map[string]interface{})
+		db.Constraints = make(map[string]any)
+	}
+
+	// Get Group information
+	db.GroupInfoMap = map[Ref]GroupInfo{}
+	for _, c := range db.Classes {
+		cid := c.Id
+		for _, d := range c.Divisions {
+			for _, gref := range d.Groups {
+				db.GroupInfoMap[gref] = GroupInfo{
+					Tag:      db.Elements[gref].(*Group).Tag,
+					Class:    cid,
+					Division: d.Name,
+				}
+			}
+		}
+	}
+	// Check that all groups belong to a class
+	for _, g := range db.Groups {
+		_, ok := db.GroupInfoMap[g.Id]
+		if !ok {
+			delete(db.Elements, g.Id)
+			Error.Printf("Group not in Class: %s\n", g.Id)
+		}
 	}
 }
 
