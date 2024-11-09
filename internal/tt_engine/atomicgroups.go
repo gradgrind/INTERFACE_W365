@@ -65,9 +65,9 @@ func filterDivisions(db *core.DbTopLevel) map[core.Ref][][]core.Ref {
 func makeAtomicGroups(
 	db *core.DbTopLevel,
 	classDivs map[core.Ref][][]core.Ref,
-) map[core.Ref][]AtomicGroup {
+) map[core.Ref][]*AtomicGroup {
 	// An atomic group is an ordered list of single groups from each division.
-	atomicGroups := map[core.Ref][]AtomicGroup{}
+	atomicGroups := map[core.Ref][]*AtomicGroup{}
 	// Go through the classes inspecting their Divisions. Only those which
 	// have Lessons are considered.
 	// Build a list-basis for the atomic groups based on the Cartesian product.
@@ -97,13 +97,13 @@ func makeAtomicGroups(
 		//fmt.Printf("     --> %+v\n", agrefs)
 
 		// Make AtomicGroups
-		aglist := []AtomicGroup{}
+		aglist := []*AtomicGroup{}
 		for _, ag := range agrefs {
 			glist := []string{}
 			for _, gref := range ag {
 				glist = append(glist, db.Elements[gref].(*core.Group).Tag)
 			}
-			ago := AtomicGroup{
+			ago := &AtomicGroup{
 				Class:  cl.Id,
 				Groups: ag,
 				Tag: cl.Tag + ATOMIC_GROUP_SEP1 +
@@ -113,7 +113,7 @@ func makeAtomicGroups(
 		}
 
 		// Map the individual groups to their atomic groups.
-		g2ags := map[core.Ref][]AtomicGroup{}
+		g2ags := map[core.Ref][]*AtomicGroup{}
 		count := 1
 		divIndex := len(divs)
 		for divIndex > 0 {
@@ -136,7 +136,7 @@ func makeAtomicGroups(
 				atomicGroups[g] = agl
 			}
 		} else {
-			atomicGroups[cl.Id] = []AtomicGroup{}
+			atomicGroups[cl.Id] = []*AtomicGroup{}
 		}
 	}
 	return atomicGroups
@@ -157,7 +157,7 @@ func classOrGroup(db *core.DbTopLevel, ref core.Ref) string {
 func printAtomicGroups(
 	db *core.DbTopLevel,
 	classDivs map[core.Ref][][]core.Ref,
-	atomicGroups map[core.Ref][]AtomicGroup,
+	atomicGroups map[core.Ref][]*AtomicGroup,
 ) {
 	for _, cl := range db.Classes {
 		agls := []string{}
