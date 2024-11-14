@@ -32,7 +32,8 @@ func TestX(t *testing.T) {
 }
 
 func TestFet(t *testing.T) {
-	w365file := "../_testdata/fms_w365.json"
+	//w365file := "../_testdata/fms_w365.json"
+	w365file := "../_testdata/Demo1.json"
 	//w365file := "../_testdata/test1.json"
 	abspath, err := filepath.Abs(w365file)
 	if err != nil {
